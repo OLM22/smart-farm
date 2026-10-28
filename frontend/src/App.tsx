@@ -1,126 +1,222 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import { ConfigProvider } from "antd";
-import OverviewPage from "./pages/OverviewPage";
-import SensorDataPage from "./pages/SensorDataPage";
-import DeepAnalysisPage from "./pages/DeepAnalysisPage";
-import { DeviceProvider } from "./contexts/DeviceContext";
-import HistoricalDataPage2 from "./pages/HistoricalDataPage2";
-import AlertsPage from "./pages/AlertsPage";
-import { AlertsProvider } from "./contexts/AlertsContext";
-import ControlPanelPage from "./pages/ControlPanelPage";
-import SettingsPage from "./pages/SettingsPage";
-import Login from "./pages/LoginPage";
-import { AuthProvider } from "./contexts/AuthContext";
-import ProtectedRoute from "./protectedRoutes/ProtectedRoute";
+import React, { useState, useEffect, useCallback } from 'react';
+import { api } from './api';
+import type { SensorRecord, AlertRule, AlertLog, DeviceControl } from './types';
+import { Navigation } from './components/Navigation';
+import { OverviewTab } from './components/OverviewTab';
+import { HistoryTab } from './components/HistoryTab';
+import { AlertsTab } from './components/AlertsTab';
+import { ControlsTab } from './components/ControlsTab';
 
-// Component that wraps authenticated routes with AlertsProvider
-function AuthenticatedApp() {
-  return (
-    <AlertsProvider>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Navigate to="/admin" replace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute>
-              <Navigate to="/admin/overview" replace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/overview"
-          element={
-            <ProtectedRoute>
-              <OverviewPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/sensor-data"
-          element={
-            <ProtectedRoute>
-              <SensorDataPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/historical-data"
-          element={
-            <ProtectedRoute>
-              <HistoricalDataPage2 />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/deep-analysis"
-          element={
-            <ProtectedRoute>
-              <DeepAnalysisPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/alerts"
-          element={
-            <ProtectedRoute>
-              <AlertsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/control-panel"
-          element={
-            <ProtectedRoute>
-              <ControlPanelPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/settings"
-          element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
-          }
-        />
-        {/* Catch all route - redirect to login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </AlertsProvider>
-  );
-}
+export const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'alerts' | 'controls'>('overview');
+  
+  // Data states
+  const [latest, setLatest] = useState<SensorRecord | null>(null);
+  const [records, setRecords] = useState<SensorRecord[]>([]);
+  const [totalLogs, setTotalLogs] = useState<number>(0);
+  const [unreadAlerts, setUnreadAlerts] = useState<number>(0);
+  const [rules, setRules] = useState<AlertRule[]>([]);
+  const [alertLogs, setAlertLogs] = useState<AlertLog[]>([]);
+  const [devices, setDevices] = useState<DeviceControl[]>([]);
+  
+  // UI states
+  const [hours, setHours] = useState<number>(24);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [serverOnline, setServerOnline] = useState<boolean>(true);
 
-function App() {
+  // Poll latest telemetry
+  const refreshLatest = useCallback(async () => {
+    try {
+      const data = await api.getLatestSensors();
+      if (data.status === 'success') {
+        setLatest(data.latest);
+        setTotalLogs(data.total_logs);
+        setUnreadAlerts(data.unread_alerts);
+        setServerOnline(true);
+      }
+    } catch (e) {
+      setServerOnline(false);
+    }
+  }, []);
+
+  // Fetch historical data
+  const refreshHistory = useCallback(async () => {
+    try {
+      const data = await api.getHistory(hours, 100);
+      if (data.status === 'success') {
+        setRecords(data.records);
+      }
+    } catch (e) {
+      console.error("Error fetching history:", e);
+    }
+  }, [hours]);
+
+  // Fetch alert rules and logs
+  const refreshAlerts = useCallback(async () => {
+    try {
+      const [rData, lData] = await Promise.all([api.getAlertRules(), api.getAlertLogs(50)]);
+      if (rData.status === 'success') setRules(rData.rules);
+      if (lData.status === 'success') setAlertLogs(lData.logs);
+    } catch (e) {
+      console.error("Error fetching alerts:", e);
+    }
+  }, []);
+
+  // Fetch device controls
+  const refreshDevices = useCallback(async () => {
+    try {
+      const data = await api.getDeviceControls();
+      if (data.status === 'success') {
+        setDevices(data.devices);
+      }
+    } catch (e) {
+      console.error("Error fetching devices:", e);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    refreshLatest();
+    refreshHistory();
+    refreshAlerts();
+    refreshDevices();
+  }, [refreshLatest, refreshHistory, refreshAlerts, refreshDevices]);
+
+  // Polling loop
+  useEffect(() => {
+    const timer = setInterval(() => {
+      refreshLatest();
+      if (activeTab === 'history') refreshHistory();
+      if (activeTab === 'alerts') refreshAlerts();
+      if (activeTab === 'controls') refreshDevices();
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [activeTab, refreshLatest, refreshHistory, refreshAlerts, refreshDevices]);
+
+  // Handlers
+  const handleSimulate = async () => {
+    setIsSyncing(true);
+    try {
+      await api.simulateTelemetrySync();
+      await refreshLatest();
+      await refreshHistory();
+      await refreshAlerts();
+    } catch (e) {
+      console.error("Simulation failed:", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleUpdateRule = async (rule: Partial<AlertRule>) => {
+    try {
+      await api.updateAlertRule(rule);
+      await refreshAlerts();
+    } catch (e) {
+      console.error("Failed to update rule:", e);
+    }
+  };
+
+  const handleMarkRead = async (id: number | 'all') => {
+    try {
+      await api.markAlertsAsRead(id);
+      await refreshAlerts();
+      await refreshLatest();
+    } catch (e) {
+      console.error("Failed to mark alert as read:", e);
+    }
+  };
+
+  const handleToggleDevice = async (deviceId: string, newState: 'ON' | 'OFF') => {
+    try {
+      await api.updateDeviceControl(deviceId, newState);
+      await refreshDevices();
+    } catch (e) {
+      console.error("Failed to toggle device:", e);
+    }
+  };
+
+  const handleToggleAutoMode = async (deviceId: string, autoMode: number) => {
+    try {
+      await api.updateDeviceControl(deviceId, undefined, autoMode);
+      await refreshDevices();
+    } catch (e) {
+      console.error("Failed to toggle auto mode:", e);
+    }
+  };
+
   return (
-    <AuthProvider>
-      <ConfigProvider
-        theme={{
-          token: {
-            colorPrimary: "#10b981",
-            colorLink: "#10b981",
-            colorLinkHover: "#059669",
-            borderRadius: 8,
-          },
-        }}
-      >
-        <DeviceProvider>
-          <div className="min-h-screen bg-gray-50">
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/*" element={<AuthenticatedApp />} />
-            </Routes>
-          </div>
-        </DeviceProvider>
-      </ConfigProvider>
-    </AuthProvider>
+    <div className="container">
+      {/* Offline Alert if Backend is not running */}
+      {!serverOnline && (
+        <div style={{
+          background: 'rgba(244, 63, 94, 0.2)',
+          border: '1px solid var(--accent-rose)',
+          borderRadius: '12px',
+          padding: '12px 18px',
+          marginBottom: '16px',
+          color: '#fecdd3',
+          fontSize: '0.875rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>⚠️ ไม่สามารถเชื่อมต่อกับ PHP REST Backend ได้ที่ <strong>http://localhost:8000</strong> กรุณาตรวจสอบว่ารัน backend อยู่หรือไม่</span>
+          <button className="btn btn-danger" onClick={refreshLatest}>ลองเชื่อมต่อใหม่</button>
+        </div>
+      )}
+
+      {/* Navigation & Header */}
+      <Navigation
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isSyncing={isSyncing}
+        unreadAlerts={unreadAlerts}
+        onSimulate={handleSimulate}
+      />
+
+      {/* Main Tab Content */}
+      <main style={{ minHeight: '650px' }}>
+        {activeTab === 'overview' && (
+          <OverviewTab latest={latest} records={records} totalLogs={totalLogs} />
+        )}
+
+        {activeTab === 'history' && (
+          <HistoryTab records={records} hours={hours} setHours={setHours} />
+        )}
+
+        {activeTab === 'alerts' && (
+          <AlertsTab
+            rules={rules}
+            logs={alertLogs}
+            onUpdateRule={handleUpdateRule}
+            onMarkRead={handleMarkRead}
+          />
+        )}
+
+        {activeTab === 'controls' && (
+          <ControlsTab
+            devices={devices}
+            onToggleDevice={handleToggleDevice}
+            onToggleAutoMode={handleToggleAutoMode}
+          />
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer style={{
+        marginTop: '40px',
+        padding: '24px 0',
+        textAlign: 'center',
+        borderTop: '1px solid var(--surface-border)',
+        color: 'var(--text-muted)',
+        fontSize: '0.8rem'
+      }}>
+        Smart Farm AIoT System &copy; 2026 &bull; ESP32 LoRa ➔ Raspberry Pi Gateway &bull; PHP REST Backend &bull; React Frontend
+      </footer>
+    </div>
   );
-}
+};
 
 export default App;

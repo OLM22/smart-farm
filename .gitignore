@@ -11,6 +11,9 @@ dist-ssr/
 build/
 *.egg-info/
 
+# Legacy Archives
+archive_legacy/
+
 # Environment and secrets
 .env
 .env.local
