@@ -1,0 +1,28 @@
+{
+  "serial": {
+    "port": "/dev/ttyUSB0",
+    "baudrate": 115200,
+    "timeout": 1.0,
+    "auto_detect": true
+  },
+  "mongodb": {
+    "uri": "mongodb://localhost:27017/",
+    "database": "smart_farm",
+    "collection": "sensor_logs"
+  },
+  "storage": {
+    "sd_data_dir": "/var/smart_farm/data",
+    "sd_threshold_percent": 80.0,
+    "flash_drive_mount": "/media/usb",
+    "archive_after_days": 7,
+    "check_interval_seconds": 3600
+  },
+  "server_sync": {
+    "enabled": true,
+    "target_url": "http://192.168.1.100/server_php/api/sync.php",
+    "api_key": "smartfarm_secret_token_2026",
+    "sync_interval_seconds": 10,
+    "batch_size": 50,
+    "timeout_seconds": 5
+  }
+}

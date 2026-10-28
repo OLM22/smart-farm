@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Farm Local Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom Toggle Switch styles */
+        .toggle-bg {
+            background-color: #cbd5e1;
+            transition: background-color 0.2s ease;
+        }
+        .toggle-dot {
+            transition: transform 0.2s ease;
+        }
+        input:checked ~ .toggle-bg {
+            background-color: #10b981; /* emerald-500 */
+        }
+        input:checked ~ .toggle-dot {
+            transform: translateX(1.25rem); /* translation distance */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand & Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="bg-emerald-500 p-2 rounded-xl text-slate-900">
+                        <i data-lucide="sprout" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight">Smart Farm Local Hub</h1>
+                        <p class="text-xs text-slate-400">Gateway Management Console</p>
+                    </div>
+                </div>
+
+                <!-- Status & User Info -->
+                <div class="flex items-center space-x-6">
+                    <!-- Cloud Sync Status Indicator -->
+                    <div class="flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+                        <span class="text-xs text-slate-400">Cloud Sync:</span>
+                        <div class="flex items-center space-x-1.5">
+                            {% if server_connected %}
+                            <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                            <span class="text-xs font-semibold text-emerald-400">Connected</span>
+                            {% else %}
+                            <span class="w-2.5 h-2.5 bg-rose-500 rounded-full"></span>
+                            <span class="text-xs font-semibold text-rose-400">Disconnected</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Logout -->
+                    <a href="/login" class="text-slate-400 hover:text-white transition duration-150 flex items-center space-x-1">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                        <span class="text-sm font-medium">Log out</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Tab Navigation Bar -->
+        <div class="flex border-b border-slate-200 mb-8 bg-white p-1 rounded-xl shadow-sm border">
+            <button id="tab-overview-btn" onclick="switchTab('overview')" class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold flex items-center justify-center space-x-2 transition duration-200 bg-emerald-500 text-white">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                <span>Overview & Manual Control</span>
+            </button>
+            <button id="tab-rules-btn" onclick="switchTab('rules')" class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold flex items-center justify-center space-x-2 text-slate-500 hover:text-slate-800 transition duration-200">
+                <i data-lucide="zap" class="w-4 h-4"></i>
+                <span>Automation Rules</span>
+            </button>
+            <button id="tab-schedules-btn" onclick="switchTab('schedules')" class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold flex items-center justify-center space-x-2 text-slate-500 hover:text-slate-800 transition duration-200">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+                <span>Timer Schedules</span>
+            </button>
+        </div>
+
+        <!-- TAB CONTENT: OVERVIEW -->
+        <section id="tab-overview" class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-bold tracking-tight text-slate-900">ESP32 Nodes Overview</h2>
+                <button onclick="fetchNodes()" class="flex items-center space-x-1 text-slate-500 hover:text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold hover:shadow-sm transition">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <span>Refresh</span>
+                </button>
+            </div>
+            <div id="nodes-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Populated dynamically via JS -->
+                <div class="col-span-full py-12 text-center text-slate-400">
+                    <i data-lucide="loader" class="w-8 h-8 animate-spin mx-auto mb-3"></i>
+                    <span>Loading registered devices...</span>
+                </div>
+            </div>
+
+            <!-- Historical Analytics Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 mt-8">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                            <i data-lucide="line-chart" class="text-emerald-500 w-5 h-5"></i>
+                            <span>Historical Analytics</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">View changes in sensor metrics over time</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Select Node</label>
+                            <select id="chart_device_select" onchange="loadChartData()" class="border border-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50">
+                                <!-- Dynamic -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Select Metric</label>
+                            <select id="chart_sensor_select" onchange="loadChartData()" class="border border-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50">
+                                <option value="soil_moisture">💧 ความชื้นดิน (Soil Moisture)</option>
+                                <option value="temperature">🌡️ อุณหภูมิ (Temperature)</option>
+                                <option value="humidity">💨 ความชื้นอากาศ (Humidity)</option>
+                            </select>
+                        </div>
+                        <button onclick="loadChartData()" class="mt-4 sm:mt-0 flex items-center space-x-1 text-slate-500 hover:text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold hover:shadow-sm transition">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="relative h-72 w-full">
+                    <canvas id="historyChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: AUTOMATION RULES -->
+        <section id="tab-rules" class="hidden space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Create Rule Form Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                        <i data-lucide="plus-circle" class="text-emerald-500 w-5 h-5"></i>
+                        <span>Create Automation Rule</span>
+                    </h3>
+                    <form id="rule-form" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Rule Name</label>
+                            <input type="text" id="rule_name" required placeholder="e.g. ปั๊มน้ำแห้งปิดปั๊ม" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Sensor Node</label>
+                                <select id="rule_sensor_node" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Sensor Type</label>
+                                <select id="rule_sensor_type" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                    <option value="soil_moisture">💧 ความชื้นดิน (Soil Moisture)</option>
+                                    <option value="temperature">🌡️ อุณหภูมิ (Temperature)</option>
+                                    <option value="humidity">💨 ความชื้นอากาศ (Humidity)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Operator</label>
+                                <select id="rule_operator" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                    <option value="<">&lt; (น้อยกว่า)</option>
+                                    <option value=">">&gt; (มากกว่า)</option>
+                                    <option value="<=">&lt;= (น้อยกว่าเท่ากับ)</option>
+                                    <option value=">=">&gt;= (มากกว่าเท่ากับ)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Threshold Value</label>
+                                <input type="number" step="0.1" id="rule_threshold" required placeholder="e.g. 30.0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Target Relay</label>
+                                <select id="rule_relay_node" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Relay Channel</label>
+                                <select id="rule_relay_channel" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                    <!-- Dynamic based on selected node -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Action</label>
+                            <select id="rule_action" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                <option value="ON">ON (เปิดการทำงาน)</option>
+                                <option value="OFF">OFF (ปิดการทำงาน)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl transition duration-150 flex items-center justify-center space-x-1 shadow-sm">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Save Rule</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Rules List -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                        <i data-lucide="list" class="text-emerald-500 w-5 h-5"></i>
+                        <span>Active Sensor Rules</span>
+                    </h3>
+                    <div class="overflow-x-auto flex-grow">
+                        <table class="min-w-full divide-y divide-slate-100 text-sm">
+                            <thead>
+                                <tr class="text-slate-400 font-semibold text-left">
+                                    <th class="py-3 px-4">Rule Name</th>
+                                    <th class="py-3 px-4">Trigger Condition</th>
+                                    <th class="py-3 px-4">Target Command</th>
+                                    <th class="py-3 px-4">Active</th>
+                                    <th class="py-3 px-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rules-list-tbody" class="divide-y divide-slate-100 text-slate-600">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: TIMER SCHEDULES -->
+        <section id="tab-schedules" class="hidden space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Create Schedule Form Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                        <i data-lucide="plus-circle" class="text-emerald-500 w-5 h-5"></i>
+                        <span>Create Timer Schedule</span>
+                    </h3>
+                    <form id="schedule-form" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Schedule Name</label>
+                            <input type="text" id="schedule_name" required placeholder="e.g. รดน้ำยามเช้า" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Target Relay</label>
+                                <select id="schedule_relay_node" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Relay Channel</label>
+                                <select id="schedule_relay_channel" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                    <!-- Dynamic based on selected node -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Turn ON at</label>
+                                <div class="flex items-center space-x-1">
+                                    <select id="schedule_on_hour" class="flex-grow border border-slate-200 rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white">
+                                        <!-- 00 to 23 -->
+                                    </select>
+                                    <span class="text-slate-400 font-bold">:</span>
+                                    <select id="schedule_on_minute" class="flex-grow border border-slate-200 rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white">
+                                        <!-- 00 to 59 -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Turn OFF at</label>
+                                <div class="flex items-center space-x-1">
+                                    <select id="schedule_off_hour" class="flex-grow border border-slate-200 rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white">
+                                        <!-- 00 to 23 -->
+                                    </select>
+                                    <span class="text-slate-400 font-bold">:</span>
+                                    <select id="schedule_off_minute" class="flex-grow border border-slate-200 rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white">
+                                        <!-- 00 to 59 -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl transition duration-150 flex items-center justify-center space-x-1 shadow-sm">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Save Schedule</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Schedules List -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                        <i data-lucide="list" class="text-emerald-500 w-5 h-5"></i>
+                        <span>Timer Schedule Lists</span>
+                    </h3>
+                    <div class="overflow-x-auto flex-grow">
+                        <table class="min-w-full divide-y divide-slate-100 text-sm">
+                            <thead>
+                                <tr class="text-slate-400 font-semibold text-left">
+                                    <th class="py-3 px-4">Schedule Name</th>
+                                    <th class="py-3 px-4">Target Relay Device</th>
+                                    <th class="py-3 px-4">ON Time</th>
+                                    <th class="py-3 px-4">OFF Time</th>
+                                    <th class="py-3 px-4">Active</th>
+                                    <th class="py-3 px-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schedules-list-tbody" class="divide-y divide-slate-100 text-slate-600">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+            Smart Farm Automation Engine &copy; 2026 - Running locally on Raspberry Pi Gateway
+        </div>
+    </footer>
+
+    <!-- JavaScript logic -->
+    <script>
+        // Global variables to store nodes data and chart instance
+        let registeredNodes = [];
+        let historyChartInstance = null;
+
+        function sortNodesByCustomOrder(nodes) {
+            const savedOrder = localStorage.getItem('nodes_order');
+            if (!savedOrder) return nodes;
+            
+            try {
+                const orderArray = JSON.parse(savedOrder);
+                return [...nodes].sort((a, b) => {
+                    const indexA = orderArray.indexOf(a.device_id);
+                    const indexB = orderArray.indexOf(b.device_id);
+                    
+                    if (indexA === -1) return 1;
+                    if (indexB === -1) return -1;
+                    
+                    return indexA - indexB;
+                });
+            } catch (e) {
+                console.error("Error sorting nodes:", e);
+                return nodes;
+            }
+        }
+
+        function loadChartData() {
+            const selectElem = document.getElementById('chart_device_select');
+            const metricElem = document.getElementById('chart_sensor_select');
+            if (!selectElem || !metricElem) return;
+            
+            const deviceId = selectElem.value;
+            const sensorType = metricElem.value;
+
+            if (!deviceId) return;
+
+            fetch(`/api/sensor-history?device_id=${deviceId}&sensor_type=${sensorType}&limit=50`)
+                .then(res => res.json())
+                .then(data => {
+                    const labels = data.map(d => {
+                        const parts = d.timestamp.split(' ');
+                        return parts.length > 1 ? parts[1] : d.timestamp;
+                    });
+                    const values = data.map(d => d.value);
+
+                    let borderColor = '#3b82f6'; // blue-500
+                    let backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                    let label = 'ความชื้นในดิน (%)';
+
+                    if (sensorType === 'temperature') {
+                         borderColor = '#f97316'; // orange-500
+                         backgroundColor = 'rgba(249, 115, 22, 0.1)';
+                         label = 'อุณหภูมิ (°C)';
+                    } else if (sensorType === 'humidity') {
+                         borderColor = '#14b8a6'; // teal-500
+                         backgroundColor = 'rgba(20, 184, 166, 0.1)';
+                         label = 'ความชื้นในอากาศ (%)';
+                    }
+
+                    const ctx = document.getElementById('historyChart').getContext('2d');
+                    
+                    if (historyChartInstance) {
+                        historyChartInstance.destroy();
+                    }
+
+                    historyChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: label,
+                                data: values,
+                                borderColor: borderColor,
+                                backgroundColor: backgroundColor,
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 3,
+                                pointHoverRadius: 5
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top',
+                                    labels: {
+                                        font: {
+                                            family: "'Plus Jakarta Sans', sans-serif",
+                                            size: 11
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: {
+                                        display: false
+                                    },
+                                    ticks: {
+                                        font: {
+                                            family: "'Plus Jakarta Sans', sans-serif",
+                                            size: 10
+                                        }
+                                    }
+                                },
+                                y: {
+                                    grid: {
+                                        color: 'rgba(241, 245, 249, 1)'
+                                    },
+                                    ticks: {
+                                        font: {
+                                            family: "'Plus Jakarta Sans', sans-serif",
+                                            size: 10
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(err => console.error("Error loading chart data:", err));
+        }
+
+        function populateTimeDropdowns() {
+            const onHour = document.getElementById('schedule_on_hour');
+            const onMinute = document.getElementById('schedule_on_minute');
+            const offHour = document.getElementById('schedule_off_hour');
+            const offMinute = document.getElementById('schedule_off_minute');
+
+            if (!onHour || !onMinute || !offHour || !offMinute) return;
+
+            let hoursHtml = '';
+            for (let i = 0; i < 24; i++) {
+                const val = i.toString().padStart(2, '0');
+                hoursHtml += `<option value="${val}">${val}</option>`;
+            }
+
+            let minutesHtml = '';
+            for (let i = 0; i < 60; i++) {
+                const val = i.toString().padStart(2, '0');
+                minutesHtml += `<option value="${val}">${val}</option>`;
+            }
+
+            onHour.innerHTML = hoursHtml;
+            offHour.innerHTML = hoursHtml;
+            onMinute.innerHTML = minutesHtml;
+            offMinute.innerHTML = minutesHtml;
+            
+            // Set some defaults
+            onHour.value = "08";
+            onMinute.value = "00";
+            offHour.value = "08";
+            offMinute.value = "30";
+        }
+
+        // Tab Switching function
+        function switchTab(tabId) {
+            const tabs = ['overview', 'rules', 'schedules'];
+            tabs.forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                
+                const btn = document.getElementById(`tab-${t}-btn`);
+                btn.className = "flex-1 py-3 px-4 rounded-lg text-sm font-semibold flex items-center justify-center space-x-2 text-slate-500 hover:text-slate-800 transition duration-200";
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tabId}-btn`);
+            activeBtn.className = "flex-1 py-3 px-4 rounded-lg text-sm font-semibold flex items-center justify-center space-x-2 bg-emerald-500 text-white shadow-md";
+            
+            // Re-render icons
+            lucide.createIcons();
+
+            // Refresh specific tab data
+            if (tabId === 'overview') {
+                fetchNodes();
+                setTimeout(loadChartData, 200);
+            } else if (tabId === 'rules') {
+                fetchRules();
+            } else if (tabId === 'schedules') {
+                fetchSchedules();
+            }
+        }
+
+        // Helper: Format Time Duration
+        function timeSince(dateString) {
+            if (!dateString) return "N/A";
+            const date = new Date(dateString.replace(/-/g, "/"));
+            const seconds = Math.floor((new Date() - date) / 1000);
+
+            if (seconds < 5) return "เมื่อครู่นี้";
+            if (seconds < 60) return `${seconds} วินาทีที่แล้ว`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes} นาทีที่แล้ว`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} ชั่วโมงที่แล้ว`;
+            return date.toLocaleString('th-TH');
+        }
+
+        // ----------------- AJAX Operations -----------------
+
+        // 1. Fetch Registered Nodes
+        function fetchNodes() {
+            fetch('/api/nodes')
+                .then(res => {
+                    if (res.status === 401) {
+                        window.location.href = '/login';
+                    }
+                    return res.json();
+                })
+                .then(nodes => {
+                    const sortedNodes = sortNodesByCustomOrder(nodes);
+                    registeredNodes = sortedNodes;
+                    renderNodes(sortedNodes);
+                    populateDropdowns(sortedNodes);
+                    // Load chart data on initial load
+                    if (!historyChartInstance && document.getElementById('chart_device_select') && document.getElementById('chart_device_select').value) {
+                        loadChartData();
+                    }
+                })
+                .catch(err => console.error("Error fetching nodes:", err));
+        }
+
+        // Render nodes inside overview grid
+        function renderNodes(nodes) {
+            const container = document.getElementById('nodes-grid');
+            if (nodes.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-white border border-slate-100 rounded-2xl py-12 text-center text-slate-400">
+                        <i data-lucide="info" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+                        <p class="font-medium text-slate-500 mb-1">ยังไม่มีบอร์ด ESP32 ลงทะเบียนในขณะนี้</p>
+                        <p class="text-xs">เปิดใช้งานบอร์ด ESP32 เพื่อให้ลงทะเบียนเข้าสู่ Broker โดยอัตโนมัติ</p>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = '';
+            nodes.forEach((node, index) => {
+                const isOnline = node.status === 'ONLINE';
+                const card = document.createElement('div');
+                card.setAttribute('draggable', 'false');
+                card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col space-y-5 transition duration-200 hover:shadow-md border-t-4 " + 
+                                 (node.node_type === 'RELAY' ? 'border-t-emerald-500' : 'border-t-sky-500');
+
+                // Header section
+                let cardHtml = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center space-x-3">
+                            <!-- Grip Drag Handle -->
+                            <div class="drag-handle cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition duration-150 mr-0.5 flex items-center justify-center">
+                                <i data-lucide="grip-vertical" class="w-5 h-5"></i>
+                            </div>
+                            <div class="p-2.5 rounded-xl ${node.node_type === 'RELAY' ? 'bg-emerald-50 text-emerald-600' : 'bg-sky-50 text-sky-600'}">
+                                <i data-lucide="${node.node_type === 'RELAY' ? 'toggle-right' : 'activity'}" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900">${node.device_id}</h4>
+                                <div class="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
+                                    <span>IP: ${node.ip_address}</span>
+                                    <span>&bull;</span>
+                                    <span>v${node.firmware_version}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'}">
+                            <span class="w-1.5 h-1.5 mr-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+                            ${node.status}
+                        </span>
+                    </div>
+                `;
+
+                // Sub-content based on Node Type
+                if (node.node_type === 'SENSOR') {
+                    const readings = node.latest_readings || {};
+                    cardHtml += `<div class="grid grid-cols-1 md:grid-cols-3 gap-4">`;
+                    
+                    // 💧 Soil Moisture
+                    if (node.sensor_types.includes('soil_moisture')) {
+                        const val = readings.soil_moisture !== undefined ? parseFloat(readings.soil_moisture).toFixed(1) : 'N/A';
+                        const progress = readings.soil_moisture !== undefined ? Math.min(Math.max(readings.soil_moisture, 0), 100) : 0;
+                        cardHtml += `
+                            <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl space-y-2">
+                                <div class="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    <span>ความชื้นในดิน</span>
+                                    <i data-lucide="droplet" class="w-4 h-4 text-sky-500"></i>
+                                </div>
+                                <div class="flex items-baseline space-x-1">
+                                    <span class="text-2xl font-bold text-slate-800">${val}</span>
+                                    <span class="text-xs text-slate-400 font-semibold">%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-sky-500 h-full rounded-full" style="width: ${progress}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // 🌡️ Temperature
+                    if (node.sensor_types.includes('temperature')) {
+                        const val = readings.temperature !== undefined ? parseFloat(readings.temperature).toFixed(1) : 'N/A';
+                        cardHtml += `
+                            <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl space-y-2">
+                                <div class="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    <span>อุณหภูมิ</span>
+                                    <i data-lucide="thermometer" class="w-4 h-4 text-orange-500"></i>
+                                </div>
+                                <div class="flex items-baseline space-x-1">
+                                    <span class="text-2xl font-bold text-slate-800">${val}</span>
+                                    <span class="text-xs text-slate-400 font-semibold">°C</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400 leading-none">Real-time thermal sensor</p>
+                            </div>
+                        `;
+                    }
+
+                    // 💨 Humidity
+                    if (node.sensor_types.includes('humidity')) {
+                        const val = readings.humidity !== undefined ? parseFloat(readings.humidity).toFixed(1) : 'N/A';
+                        cardHtml += `
+                            <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl space-y-2">
+                                <div class="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    <span>ความชื้นอากาศ</span>
+                                    <i data-lucide="wind" class="w-4 h-4 text-teal-500"></i>
+                                </div>
+                                <div class="flex items-baseline space-x-1">
+                                    <span class="text-2xl font-bold text-slate-800">${val}</span>
+                                    <span class="text-xs text-slate-400 font-semibold">%</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400 leading-none">Ambient air moisture</p>
+                            </div>
+                        `;
+                    }
+
+                    cardHtml += `</div>`;
+                } 
+                else if (node.node_type === 'RELAY') {
+                    cardHtml += `<div class="space-y-3">`;
+                    
+                    const channels = node.channels_info || [];
+                    for(let ch=1; ch <= node.relay_count; ch++) {
+                        const chInfo = channels.find(c => c.ch === ch) || {};
+                        const chName = chInfo.name || `Relay Channel ${ch}`;
+                        
+                        // Check state - for toggle, we can manage active states.
+                        // Let's read simulated states if any, but currently manual control is command and it doesn't store active state.
+                        // To allow toggling cleanly, let's store states in session storage or retrieve if available.
+                        // Let's use a temporary checkbox. When clicked, we submit command.
+                        // We will set its state based on a local state we track in localStorage/sessionStorage.
+                        const stateKey = `relay_state_${node.device_id}_${ch}`;
+                        const isChecked = localStorage.getItem(stateKey) === 'ON';
+
+                        cardHtml += `
+                            <div class="flex justify-between items-center bg-slate-50 border border-slate-100 px-4 py-3 rounded-xl">
+                                <div class="flex items-center space-x-3">
+                                    <span class="w-6 h-6 flex items-center justify-center bg-slate-200 text-slate-600 rounded-full text-xs font-bold">${ch}</span>
+                                    <div>
+                                        <div class="flex items-center space-x-1.5">
+                                            <p id="label-${node.device_id}-${ch}" class="text-sm font-semibold text-slate-800">${chName}</p>
+                                            <button onclick="editChannelName('${node.device_id}', ${ch}, '${chName.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-emerald-500 p-0.5 rounded transition" title="แก้ไขชื่อ">
+                                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
+                                        <span id="badge-${node.device_id}-${ch}" class="inline-block text-[10px] font-bold ${isChecked ? 'text-emerald-500' : 'text-slate-400'}">
+                                            ${isChecked ? '🟢 กำลังทำงาน' : '⚪ ปิดอยู่'}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Switch Toggle Slider -->
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="switch-${node.device_id}-${ch}" class="sr-only peer" ${isChecked ? 'checked' : ''} onchange="toggleManualRelay('${node.device_id}', ${ch}, this)">
+                                    <div class="w-9 h-5 bg-slate-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-emerald-500/20 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                                </label>
+                            </div>
+                        `;
+                    }
+                    cardHtml += `</div>`;
+                }
+
+                // Footer section with last seen
+                cardHtml += `
+                    <div class="border-t border-slate-100 pt-3 flex justify-between items-center text-xs text-slate-400">
+                        <span class="flex items-center space-x-1">
+                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                            <span>Last Seen: ${timeSince(node.last_seen)}</span>
+                        </span>
+                    </div>
+                `;
+
+                card.innerHTML = cardHtml;
+                
+                // Set up drag events
+                card.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', index);
+                    card.classList.add('opacity-40');
+                });
+                card.addEventListener('dragend', (e) => {
+                    card.classList.remove('opacity-40');
+                    card.setAttribute('draggable', 'false');
+                });
+                card.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                });
+                card.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const targetIndex = index;
+                    
+                    if (draggedIndex !== targetIndex) {
+                        // Swap items in registeredNodes array
+                        const temp = registeredNodes[draggedIndex];
+                        registeredNodes[draggedIndex] = registeredNodes[targetIndex];
+                        registeredNodes[targetIndex] = temp;
+                        
+                        // Save new order to localStorage
+                        const newOrder = registeredNodes.map(n => n.device_id);
+                        localStorage.setItem('nodes_order', JSON.stringify(newOrder));
+                        
+                        // Re-render
+                        renderNodes(registeredNodes);
+                    }
+                });
+
+                // Set up drag handle trigger
+                const handle = card.querySelector('.drag-handle');
+                if (handle) {
+                    handle.addEventListener('mousedown', () => {
+                        card.setAttribute('draggable', 'true');
+                    });
+                    handle.addEventListener('mouseup', () => {
+                        card.setAttribute('draggable', 'false');
+                    });
+                }
+
+                container.appendChild(card);
+            });
+
+            // Refresh icons inside rendered cards
+            lucide.createIcons();
+        }
+
+        // Toggle Manual Relay Action
+        function toggleManualRelay(deviceId, channel, element) {
+            const action = element.checked ? 'ON' : 'OFF';
+            
+            // Instantly update badge for feedback
+            const badge = document.getElementById(`badge-${deviceId}-${channel}`);
+            if (action === 'ON') {
+                badge.innerText = '🟢 กำลังทำงาน';
+                badge.className = 'inline-block text-[10px] font-bold text-emerald-500';
+            } else {
+                badge.innerText = '⚪ ปิดอยู่';
+                badge.className = 'inline-block text-[10px] font-bold text-slate-400';
+            }
+
+            const formData = new FormData();
+            formData.append('device_id', deviceId);
+            formData.append('channel', channel);
+            formData.append('action', action);
+
+            fetch('/api/relay/manual', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Store state locally to remember toggle on refresh
+                    localStorage.setItem(`relay_state_${deviceId}_${channel}`, action);
+                } else {
+                    alert('ไม่สามารถส่งคำสั่งได้');
+                    // Rollback checked state
+                    element.checked = !element.checked;
+                }
+            })
+            .catch(err => {
+                console.error("Error toggle relay:", err);
+            });
+        }
+
+        let currentRenameNodeId = '';
+        let currentRenameChannel = 0;
+
+        function editChannelName(deviceId, channel, currentName) {
+            currentRenameNodeId = deviceId;
+            currentRenameChannel = channel;
+            
+            const modal = document.getElementById('rename-modal');
+            const card = document.getElementById('rename-modal-card');
+            const label = document.getElementById('rename-channel-label');
+            const input = document.getElementById('rename_input');
+            
+            if (!modal || !card || !label || !input) return;
+            
+            label.innerText = `ชื่อช่องควบคุม ${channel} (${deviceId})`;
+            input.value = currentName;
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            // Trigger transition Reflow
+            void modal.offsetWidth;
+            card.classList.remove('scale-95', 'opacity-0');
+            card.classList.add('scale-100', 'opacity-100');
+            
+            // Focus and select input
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 100);
+
+            // Bind enter key
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    submitRename();
+                }
+            };
+            
+            // Re-render icon inside modal
+            lucide.createIcons();
+        }
+
+        function closeRenameModal() {
+            const modal = document.getElementById('rename-modal');
+            const card = document.getElementById('rename-modal-card');
+            
+            if (!modal || !card) return;
+            
+            card.classList.remove('scale-100', 'opacity-100');
+            card.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function submitRename() {
+            const input = document.getElementById('rename_input');
+            if (!input) return;
+            
+            const newName = input.value.trim();
+            if (newName === '') return;
+            
+            const payload = {
+                device_id: currentRenameNodeId,
+                channel: currentRenameChannel,
+                name: newName
+            };
+
+            fetch('/api/relay/rename', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update label locally immediately
+                    const label = document.getElementById(`label-${currentRenameNodeId}-${currentRenameChannel}`);
+                    if (label) label.innerText = newName;
+                    
+                    // Close Modal
+                    closeRenameModal();
+                    
+                    // Refresh nodes to update forms
+                    fetchNodes();
+                } else {
+                    alert('ไม่สามารถแก้ไขชื่อได้');
+                }
+            })
+            .catch(err => console.error("Error renaming relay channel:", err));
+        }
+
+        // Populate sensor and relay dropdowns in Forms dynamically
+        function populateDropdowns(nodes) {
+            const sensorSelect = document.getElementById('rule_sensor_node');
+            const ruleRelaySelect = document.getElementById('rule_relay_node');
+            const schedRelaySelect = document.getElementById('schedule_relay_node');
+
+            if (!sensorSelect) return; // Not on the current tab yet
+
+            const sensorNodes = nodes.filter(n => n.node_type === 'SENSOR');
+            const relayNodes = nodes.filter(n => n.node_type === 'RELAY');
+
+            // Populate Sensor list
+            sensorSelect.innerHTML = sensorNodes.map(n => `<option value="${n.device_id}">${n.device_id}</option>`).join('') || '<option value="">No sensor nodes</option>';
+            
+            // Populate Chart Device Select
+            const chartDeviceSelect = document.getElementById('chart_device_select');
+            if (chartDeviceSelect) {
+                const currentVal = chartDeviceSelect.value;
+                chartDeviceSelect.innerHTML = sensorNodes.map(n => `<option value="${n.device_id}">${n.device_id}</option>`).join('') || '<option value="">No sensor nodes</option>';
+                if (currentVal && Array.from(chartDeviceSelect.options).some(o => o.value === currentVal)) {
+                    chartDeviceSelect.value = currentVal;
+                }
+            }
+            
+            // Populate Relay list for Rules
+            ruleRelaySelect.innerHTML = relayNodes.map(n => `<option value="${n.device_id}">${n.device_id}</option>`).join('') || '<option value="">No relay nodes</option>';
+            
+            // Populate Relay list for Schedules
+            schedRelaySelect.innerHTML = relayNodes.map(n => `<option value="${n.device_id}">${n.device_id}</option>`).join('') || '<option value="">No relay nodes</option>';
+
+            // Setup relay channels when selection changes
+            setupChannelsDropdown(ruleRelaySelect, 'rule_relay_channel', relayNodes);
+            setupChannelsDropdown(schedRelaySelect, 'schedule_relay_channel', relayNodes);
+
+            ruleRelaySelect.onchange = () => setupChannelsDropdown(ruleRelaySelect, 'rule_relay_channel', relayNodes);
+            schedRelaySelect.onchange = () => setupChannelsDropdown(schedRelaySelect, 'schedule_relay_channel', relayNodes);
+        }
+
+        function setupChannelsDropdown(selectElem, targetSelectId, relayNodes) {
+            const targetSelect = document.getElementById(targetSelectId);
+            if (!targetSelect) return;
+
+            const selectedDevice = selectElem.value;
+            const node = relayNodes.find(n => n.device_id === selectedDevice);
+            
+            if (node) {
+                let options = '';
+                const channels = node.channels_info || [];
+                for(let i=1; i <= node.relay_count; i++) {
+                    const chInfo = channels.find(c => c.ch === i) || {};
+                    const chName = chInfo.name || `Channel ${i}`;
+                    options += `<option value="${i}">CH ${i} (${chName})</option>`;
+                }
+                targetSelect.innerHTML = options;
+            } else {
+                targetSelect.innerHTML = '<option value="">No channels</option>';
+            }
+        }
+
+        // 2. Fetch Automation Rules
+        function fetchRules() {
+            fetch('/api/rules')
+                .then(res => res.json())
+                .then(rules => {
+                    const tbody = document.getElementById('rules-list-tbody');
+                    if (rules.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">ยังไม่มีการเพิ่มเงื่อนไขใดๆ ในระบบ</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = '';
+                    rules.forEach(rule => {
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-slate-50 transition";
+                        
+                        tr.innerHTML = `
+                            <td class="py-3 px-4 font-bold text-slate-900">${rule.rule_name}</td>
+                            <td class="py-3 px-4">
+                                <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-semibold">
+                                    ${rule.sensor_device_id} [${rule.sensor_type}] ${rule.operator} ${rule.threshold_value}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-xs font-bold border border-emerald-100">
+                                    ${rule.target_relay_device_id} CH ${rule.target_channel} -> ${rule.action}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" ${rule.is_active === 1 ? 'checked' : ''} onchange="toggleRuleActive(${rule.rule_id})">
+                                    <div class="w-9 h-5 bg-slate-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-emerald-500/20 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                                </label>
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                                <button onclick="deleteRule(${rule.rule_id})" class="text-rose-500 hover:text-rose-700 p-1 bg-rose-50 hover:bg-rose-100 rounded-lg transition">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    lucide.createIcons();
+                })
+                .catch(err => console.error("Error fetching rules:", err));
+        }
+
+        // Add Rule Form Submit
+        document.getElementById('rule-form').onsubmit = (e) => {
+            e.preventDefault();
+            const payload = {
+                rule_name: document.getElementById('rule_name').value,
+                sensor_device_id: document.getElementById('rule_sensor_node').value,
+                sensor_type: document.getElementById('rule_sensor_type').value,
+                operator: document.getElementById('rule_operator').value,
+                threshold_value: parseFloat(document.getElementById('rule_threshold').value),
+                target_relay_device_id: document.getElementById('rule_relay_node').value,
+                target_channel: parseInt(document.getElementById('rule_relay_channel').value),
+                action: document.getElementById('rule_action').value
+            };
+
+            fetch('/api/rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('rule_name').value = '';
+                    document.getElementById('rule_threshold').value = '';
+                    fetchRules();
+                }
+            })
+            .catch(err => console.error("Error creating rule:", err));
+        };
+
+        function toggleRuleActive(ruleId) {
+            fetch(`/api/rules/${ruleId}/toggle`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status !== 'success') {
+                        alert('ไม่สามารถเปลี่ยนสถานะได้');
+                    }
+                });
+        }
+
+        function deleteRule(ruleId) {
+            if (confirm('คุณต้องการลบกฎฟีเจอร์นี้หรือไม่?')) {
+                fetch(`/api/rules/${ruleId}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            fetchRules();
+                        }
+                    });
+            }
+        }
+
+        // 3. Fetch Timer Schedules
+        function fetchSchedules() {
+            fetch('/api/schedules')
+                .then(res => res.json())
+                .then(schedules => {
+                    const tbody = document.getElementById('schedules-list-tbody');
+                    if (schedules.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">ยังไม่มีการสร้างตารางเวลาใดๆ ในระบบ</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = '';
+                    schedules.forEach(sched => {
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-slate-50 transition";
+                        
+                        tr.innerHTML = `
+                            <td class="py-3 px-4 font-bold text-slate-900">${sched.schedule_name}</td>
+                            <td class="py-3 px-4">
+                                <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-semibold">
+                                    ${sched.target_relay_device_id} (CH ${sched.target_channel})
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 font-semibold text-emerald-600">${sched.on_time}</td>
+                            <td class="py-3 px-4 font-semibold text-slate-400">${sched.off_time}</td>
+                            <td class="py-3 px-4">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" ${sched.is_active === 1 ? 'checked' : ''} onchange="toggleScheduleActive(${sched.schedule_id})">
+                                    <div class="w-9 h-5 bg-slate-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-emerald-500/20 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                                </label>
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                                <button onclick="deleteSchedule(${sched.schedule_id})" class="text-rose-500 hover:text-rose-700 p-1 bg-rose-50 hover:bg-rose-100 rounded-lg transition">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    lucide.createIcons();
+                })
+                .catch(err => console.error("Error fetching schedules:", err));
+        }
+
+        // Add Schedule Form Submit
+        document.getElementById('schedule-form').onsubmit = (e) => {
+            e.preventDefault();
+            const onHour = document.getElementById('schedule_on_hour').value;
+            const onMinute = document.getElementById('schedule_on_minute').value;
+            const offHour = document.getElementById('schedule_off_hour').value;
+            const offMinute = document.getElementById('schedule_off_minute').value;
+
+            const payload = {
+                schedule_name: document.getElementById('schedule_name').value,
+                target_relay_device_id: document.getElementById('schedule_relay_node').value,
+                target_channel: parseInt(document.getElementById('schedule_relay_channel').value),
+                on_time: `${onHour}:${onMinute}`,
+                off_time: `${offHour}:${offMinute}`
+            };
+
+            fetch('/api/schedules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('schedule_name').value = '';
+                    document.getElementById('schedule_on_time').value = '';
+                    document.getElementById('schedule_off_time').value = '';
+                    fetchSchedules();
+                }
+            })
+            .catch(err => console.error("Error creating schedule:", err));
+        };
+
+        function toggleScheduleActive(schedId) {
+            fetch(`/api/schedules/${schedId}/toggle`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status !== 'success') {
+                        alert('ไม่สามารถเปลี่ยนสถานะได้');
+                    }
+                });
+        }
+
+        function deleteSchedule(schedId) {
+            if (confirm('คุณต้องการลบตารางเวลานี้หรือไม่?')) {
+                fetch(`/api/schedules/${schedId}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            fetchSchedules();
+                        }
+                    });
+            }
+        }
+
+        // ----------------- Real-time Poll Loop -----------------
+        // Poll nodes every 2 seconds to keep readings and online/offline statuses updated
+        setInterval(() => {
+            fetch('/api/nodes')
+                .then(res => res.json())
+                .then(nodes => {
+                    const sortedNodes = sortNodesByCustomOrder(nodes);
+                    registeredNodes = sortedNodes;
+                    
+                    // Update only Overview grid if it's currently active/visible
+                    if (!document.getElementById('tab-overview').classList.contains('hidden')) {
+                        renderNodes(sortedNodes);
+                    }
+                })
+                .catch(err => console.error("Poll error:", err));
+        }, 2000);
+
+        // Initial setup on window load
+        window.onload = () => {
+            fetchNodes();
+            populateTimeDropdowns();
+            // Start icons rendering
+            lucide.createIcons();
+        };
+    </script>
+    
+    <!-- Custom Modal for Renaming Relay Channel -->
+    <div id="rename-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300" onclick="closeRenameModal()"></div>
+        
+        <!-- Modal content card -->
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-100 max-w-sm w-full p-6 relative z-10 transform scale-95 opacity-0 transition-all duration-200" id="rename-modal-card">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="p-2.5 rounded-xl bg-emerald-50 text-emerald-600">
+                    <i data-lucide="edit-3" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">Rename Channel</h3>
+                    <p class="text-xs text-slate-400">แก้ไขชื่อสำหรับช่องควบคุม</p>
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1" id="rename-channel-label">Channel Number</label>
+                    <input type="text" id="rename_input" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white" placeholder="e.g. ปั๊มน้ำหลัก">
+                </div>
+                
+                <div class="flex space-x-3 pt-2">
+                    <button type="button" onclick="closeRenameModal()" class="flex-grow bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-xl transition duration-150 text-sm text-center">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="submitRename()" class="flex-grow bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-xl transition duration-150 text-sm text-center flex items-center justify-center space-x-1 shadow-sm">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>Save</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

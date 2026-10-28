@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Sensor Value Sender</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface-2: #242736;
+            --border: #2e3144;
+            --text: #e4e6f0;
+            --text-muted: #8b8fa3;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.3);
+            --green: #00b894;
+            --green-glow: rgba(0, 184, 148, 0.25);
+            --red: #e74c3c;
+            --orange: #f39c12;
+            --temp-color: #fd7e14;
+            --light-color: #ffc107;
+            --ph-color: #a855f7;
+            --co2-color: #6c757d;
+            --ec-color: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Top bar */
+        .topbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .topbar h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .topbar h1 span.badge {
+            background: var(--accent);
+            color: white;
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            background: var(--red);
+            transition: background 0.3s;
+        }
+
+        .status-dot.connected {
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green-glow);
+        }
+
+        .status-dot.connecting {
+            background: var(--orange);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .status-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Main layout */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 28px 20px;
+        }
+
+        .desc {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 28px;
+        }
+
+        /* Sensor cards grid */
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 640px) {
+            .sensor-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .sensor-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .sensor-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .sensor-card .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .sensor-card .card-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sensor-card .card-title .icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .icon-temp {
+            background: rgba(253, 126, 20, 0.15);
+        }
+
+        .icon-light {
+            background: rgba(255, 193, 7, 0.15);
+        }
+
+        .icon-ph {
+            background: rgba(168, 85, 247, 0.15);
+        }
+
+        .icon-co2 {
+            background: rgba(108, 117, 125, 0.15);
+        }
+
+        .icon-ec {
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .sensor-card .topic-badge {
+            font-size: 0.65rem;
+            background: var(--surface-2);
+            color: var(--text-muted);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        /* Value display */
+        .value-display {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        .value-display .current-val {
+            font-size: 2.2rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            transition: color 0.3s;
+        }
+
+        .value-display .unit {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .val-temp {
+            color: var(--temp-color);
+        }
+
+        .val-light {
+            color: var(--light-color);
+        }
+
+        .val-ph {
+            color: var(--ph-color);
+        }
+
+        .val-co2 {
+            color: var(--co2-color);
+        }
+
+        .val-ec {
+            color: var(--ec-color);
+        }
+
+        /* Slider */
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .slider-row input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--surface-2);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 6px var(--accent-glow);
+        }
+
+        .slider-row input[type="number"] {
+            width: 80px;
+            padding: 8px 10px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.95rem;
+            text-align: center;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .slider-row input[type="number"]:focus {
+            border-color: var(--accent);
+        }
+
+        /* Action buttons */
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-send {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-send:hover {
+            background: #5b4bd5;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .btn-send:active {
+            transform: translateY(0);
+        }
+
+        .btn-send.sent {
+            background: var(--green) !important;
+        }
+
+        .btn-random {
+            background: var(--surface-2);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        .btn-random:hover {
+            color: var(--text);
+            border-color: var(--text-muted);
+        }
+
+        /* Auto send section */
+        .auto-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .auto-section h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .auto-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .auto-row label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .auto-row input[type="number"] {
+            width: 70px;
+            padding: 8px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.85rem;
+            text-align: center;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .auto-row input[type="number"]:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-auto {
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-auto-start {
+            background: var(--green);
+            color: white;
+        }
+
+        .btn-auto-start:hover {
+            background: #00a382;
+        }
+
+        .btn-auto-stop {
+            background: var(--red);
+            color: white;
+        }
+
+        .btn-auto-stop:hover {
+            background: #c0392b;
+        }
+
+        .auto-status {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        .auto-status.active {
+            color: var(--green);
+        }
+
+        /* Log panel */
+        .log-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .log-panel .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .log-panel .log-header h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .log-panel .log-header .btn-clear {
+            padding: 5px 12px;
+            background: var(--surface-2);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .log-panel .log-header .btn-clear:hover {
+            color: var(--red);
+            border-color: var(--red);
+        }
+
+        #mqtt-log {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.75rem;
+            background: var(--bg);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        #mqtt-log::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #mqtt-log::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #mqtt-log::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .log-entry {
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(46, 49, 68, 0.4);
+            line-height: 1.5;
+        }
+
+        .log-entry.send {
+            color: #74b9ff;
+        }
+
+        .log-entry.receive {
+            color: var(--green);
+        }
+
+        .log-entry.error {
+            color: var(--red);
+        }
+
+        .log-entry .time {
+            color: var(--text-muted);
+        }
+
+        /* Send All button */
+        .send-all-section {
+            margin-bottom: 20px;
+        }
+
+        .btn-send-all {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-send-all:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        .btn-send-all:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Top Bar -->
+    <div class="topbar">
+        <h1>
+            🛠️ Admin Sensor Sender
+            <span class="badge">Test Tool</span>
+        </h1>
+        <div class="status-text">
+            <span class="status-dot connecting" id="status-dot"></span>
+            <span id="status-label">Connecting…</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <p class="desc">
+            ส่งค่าตัวเลขเซ็นเซอร์ไปยัง MQTT Broker → แสดงผลที่หน้า Dashboard (/testsenser.html)
+        </p>
+
+        <!-- Sensor Cards -->
+        <div class="sensor-grid">
+            <!-- Temperature -->
+            <div class="sensor-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="icon icon-temp">🌡️</div>
+                        Temperature
+                    </div>
+                    <div class="topic-badge">/station1/temp/value</div>
+                </div>
+                <div class="value-display">
+                    <span class="current-val val-temp" id="display-temp">25.0</span>
+                    <span class="unit">°C</span>
+                </div>
+                <div class="slider-row">
+                    <input type="range" id="slide-temp" min="0" max="50" step="0.1" value="25"
+                        oninput="syncSlider('temp', this.value, 'slide')">
+                    <input type="number" id="input-temp" min="0" max="50" step="0.1" value="25"
+                        oninput="syncSlider('temp', this.value, 'input')">
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-send" id="btn-temp" onclick="sendValue('temp')">📤 Send</button>
+                    <button class="btn btn-random" onclick="randomize('temp')">🎲 Random</button>
+                </div>
+            </div>
+
+            <!-- Light -->
+            <div class="sensor-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="icon icon-light">☀️</div>
+                        Light
+                    </div>
+                    <div class="topic-badge">/station1/light/value</div>
+                </div>
+                <div class="value-display">
+                    <span class="current-val val-light" id="display-light">1000</span>
+                    <span class="unit">Lux</span>
+                </div>
+                <div class="slider-row">
+                    <input type="range" id="slide-light" min="0" max="50000" step="10" value="1000"
+                        oninput="syncSlider('light', this.value, 'slide')">
+                    <input type="number" id="input-light" min="0" max="50000" step="10" value="1000"
+                        oninput="syncSlider('light', this.value, 'input')">
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-send" id="btn-light" onclick="sendValue('light')">📤 Send</button>
+                    <button class="btn btn-random" onclick="randomize('light')">🎲 Random</button>
+                </div>
+            </div>
+
+            <!-- pH -->
+            <div class="sensor-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="icon icon-ph">🧪</div>
+                        pH Level
+                    </div>
+                    <div class="topic-badge">/station1/ph/value</div>
+                </div>
+                <div class="value-display">
+                    <span class="current-val val-ph" id="display-ph">7.0</span>
+                    <span class="unit">pH</span>
+                </div>
+                <div class="slider-row">
+                    <input type="range" id="slide-ph" min="0" max="14" step="0.1" value="7.0"
+                        oninput="syncSlider('ph', this.value, 'slide')">
+                    <input type="number" id="input-ph" min="0" max="14" step="0.1" value="7.0"
+                        oninput="syncSlider('ph', this.value, 'input')">
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-send" id="btn-ph" onclick="sendValue('ph')">📤 Send</button>
+                    <button class="btn btn-random" onclick="randomize('ph')">🎲 Random</button>
+                </div>
+            </div>
+
+            <!-- CO₂ -->
+            <div class="sensor-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="icon icon-co2">☁️</div>
+                        CO₂ Level
+                    </div>
+                    <div class="topic-badge">/station1/co2/value</div>
+                </div>
+                <div class="value-display">
+                    <span class="current-val val-co2" id="display-co2">400</span>
+                    <span class="unit">ppm</span>
+                </div>
+                <div class="slider-row">
+                    <input type="range" id="slide-co2" min="0" max="5000" step="1" value="400"
+                        oninput="syncSlider('co2', this.value, 'slide')">
+                    <input type="number" id="input-co2" min="0" max="5000" step="1" value="400"
+                        oninput="syncSlider('co2', this.value, 'input')">
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-send" id="btn-co2" onclick="sendValue('co2')">📤 Send</button>
+                    <button class="btn btn-random" onclick="randomize('co2')">🎲 Random</button>
+                </div>
+            </div>
+
+            <!-- EC -->
+            <div class="sensor-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="icon icon-ec">⚡</div>
+                        EC Level
+                    </div>
+                    <div class="topic-badge">/station1/ec/value</div>
+                </div>
+                <div class="value-display">
+                    <span class="current-val val-ec" id="display-ec">1200</span>
+                    <span class="unit">µS/cm</span>
+                </div>
+                <div class="slider-row">
+                    <input type="range" id="slide-ec" min="0" max="5000" step="10" value="1200"
+                        oninput="syncSlider('ec', this.value, 'slide')">
+                    <input type="number" id="input-ec" min="0" max="5000" step="10" value="1200"
+                        oninput="syncSlider('ec', this.value, 'input')">
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-send" id="btn-ec" onclick="sendValue('ec')">📤 Send</button>
+                    <button class="btn btn-random" onclick="randomize('ec')">🎲 Random</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Send All -->
+        <div class="send-all-section">
+            <button class="btn-send-all" onclick="sendAll()">🚀 Send All Values</button>
+        </div>
+
+        <!-- Auto Send -->
+        <div class="auto-section">
+            <h3>⏱️ Auto Send (ส่งอัตโนมัติ)</h3>
+            <div class="auto-row">
+                <label>Interval (วินาที):</label>
+                <input type="number" id="auto-interval" min="1" max="60" value="3">
+                <button class="btn-auto btn-auto-start" id="btn-auto-start" onclick="startAutoSend()">▶ Start</button>
+                <button class="btn-auto btn-auto-stop" id="btn-auto-stop" onclick="stopAutoSend()"
+                    style="display:none;">⏹ Stop</button>
+                <span class="auto-status" id="auto-status">Stopped</span>
+            </div>
+        </div>
+
+        <!-- Log Panel -->
+        <div class="log-panel">
+            <div class="log-header">
+                <h3>📋 Publish Log</h3>
+                <button class="btn-clear" onclick="clearLog()">Clear</button>
+            </div>
+            <div id="mqtt-log"></div>
+        </div>
+    </div>
+
+    <script>
+        // ====== API Settings ======
+        const API_BASE = 'http://localhost:4000/api/mqtt';
+
+        const TOPICS = {
+            temp: 'station1/temp/value',
+            light: 'station1/light/value',
+            ph: 'station1/ph/value',
+            co2: 'station1/co2/value',
+            ec: 'station1/ec/value'
+        };
+
+        const RANGES = {
+            temp: { min: 20, max: 40, step: 0.1, decimals: 1 },
+            light: { min: 500, max: 30000, step: 10, decimals: 0 },
+            ph: { min: 5, max: 9, step: 0.1, decimals: 1 },
+            co2: { min: 200, max: 2000, step: 1, decimals: 0 },
+            ec: { min: 500, max: 2500, step: 10, decimals: 0 }
+        };
+
+        const statusDot = document.getElementById('status-dot');
+        const statusLabel = document.getElementById('status-label');
+        const logPanel = document.getElementById('mqtt-log');
+
+        let autoTimer = null;
+        let apiConnected = false;
+
+        // ====== Log ======
+        function addLog(msg, type = '') {
+            const now = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.innerHTML = `<span class="time">[${now}]</span> ${msg}`;
+            logPanel.prepend(entry);
+            while (logPanel.children.length > 80) {
+                logPanel.removeChild(logPanel.lastChild);
+            }
+        }
+
+        function clearLog() {
+            logPanel.innerHTML = '';
+        }
+
+        // ====== Check Backend Connection ======
+        async function checkConnection() {
+            try {
+                const res = await fetch(`${API_BASE}/sensor/values`, { signal: AbortSignal.timeout(3000) });
+                if (res.ok) {
+                    if (!apiConnected) {
+                        apiConnected = true;
+                        statusDot.className = 'status-dot connected';
+                        statusLabel.textContent = 'Connected (API)';
+                        addLog('✅ เชื่อมต่อ Backend API สำเร็จ!', 'receive');
+                    }
+                    return true;
+                }
+            } catch (e) {
+                if (apiConnected || statusLabel.textContent === 'Connecting…') {
+                    apiConnected = false;
+                    statusDot.className = 'status-dot';
+                    statusLabel.textContent = 'Disconnected';
+                    addLog('🔴 ไม่สามารถเชื่อมต่อ Backend ได้', 'error');
+                }
+            }
+            return false;
+        }
+
+        // Check every 5 seconds
+        checkConnection();
+        setInterval(checkConnection, 5000);
+
+        // ====== Sync Slider ↔ Input ======
+        function syncSlider(type, value, source) {
+            if (source === 'slide') {
+                document.getElementById(`input-${type}`).value = value;
+            } else {
+                document.getElementById(`slide-${type}`).value = value;
+            }
+            document.getElementById(`display-${type}`).textContent = parseFloat(value).toFixed(RANGES[type].decimals);
+        }
+
+        // ====== Random Value ======
+        function randomize(type) {
+            const r = RANGES[type];
+            let val = Math.random() * (r.max - r.min) + r.min;
+            val = parseFloat(val.toFixed(r.decimals));
+            document.getElementById(`slide-${type}`).value = val;
+            document.getElementById(`input-${type}`).value = val;
+            document.getElementById(`display-${type}`).textContent = val.toFixed(r.decimals);
+        }
+
+        // ====== Send Value via HTTP POST ======
+        async function sendValue(type) {
+            const value = document.getElementById(`input-${type}`).value;
+            const topic = TOPICS[type];
+            const url = `${API_BASE}/${topic}/${value}`;
+
+            const btn = document.getElementById(`btn-${type}`);
+
+            try {
+                const res = await fetch(url, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    addLog(`📤 <b>[/${topic}]</b> → ${value}`, 'send');
+                    btn.classList.add('sent');
+                    btn.textContent = '✅ Sent!';
+                    setTimeout(() => {
+                        btn.classList.remove('sent');
+                        btn.textContent = '📤 Send';
+                    }, 800);
+
+                    if (!apiConnected) {
+                        apiConnected = true;
+                        statusDot.className = 'status-dot connected';
+                        statusLabel.textContent = 'Connected (API)';
+                    }
+                } else {
+                    addLog(`❌ ส่งไม่สำเร็จ: ${data.message}`, 'error');
+                }
+            } catch (e) {
+                addLog(`❌ ไม่สามารถเชื่อมต่อ Backend: ${e.message}`, 'error');
+                statusDot.className = 'status-dot';
+                statusLabel.textContent = 'Disconnected';
+                apiConnected = false;
+            }
+        }
+
+        // ====== Send All ======
+        function sendAll() {
+            ['temp', 'light', 'ph', 'co2', 'ec'].forEach(type => sendValue(type));
+        }
+
+        // ====== Auto Send ======
+        function startAutoSend() {
+            if (autoTimer) return;
+            const interval = parseInt(document.getElementById('auto-interval').value) || 3;
+
+            document.getElementById('btn-auto-start').style.display = 'none';
+            document.getElementById('btn-auto-stop').style.display = '';
+            document.getElementById('auto-status').textContent = `Running (${interval}s)`;
+            document.getElementById('auto-status').className = 'auto-status active';
+
+            // Randomize + send immediately
+            ['temp', 'light', 'ph', 'co2', 'ec'].forEach(type => randomize(type));
+            sendAll();
+
+            autoTimer = setInterval(() => {
+                ['temp', 'light', 'ph', 'co2', 'ec'].forEach(type => randomize(type));
+                sendAll();
+            }, interval * 1000);
+        }
+
+        function stopAutoSend() {
+            if (autoTimer) {
+                clearInterval(autoTimer);
+                autoTimer = null;
+            }
+            document.getElementById('btn-auto-start').style.display = '';
+            document.getElementById('btn-auto-stop').style.display = 'none';
+            document.getElementById('auto-status').textContent = 'Stopped';
+            document.getElementById('auto-status').className = 'auto-status';
+        }
+    </script>
+</body>
+
+</html>

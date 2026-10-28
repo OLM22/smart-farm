@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chlorella Monitoring Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
+        .value { font-size: 24px; font-weight: bold; color: #2c3e50; margin: 10px 0; }
+        .unit { font-size: 14px; color: #7f8c8d; }
+        .label { color: #e74c3c; font-weight: bold; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <h1>Chlorella System Dashboard</h1>
+    <div class="grid" id="dashboard">
+        </div>
+
+    <script>
+        const broker = "YOUR_MINI_PC_IP"; // ใส่ IP ของ Mini PC
+        const port = 9001;
+        const client = new Paho.MQTT.Client(broker, port, "web_client_" + Math.random());
+
+        // รายชื่อ Topic ตามที่คุณต้องการ
+        const topics = [
+            "sensor_temp_inflow", "sensor_humid_inflow", "sensor_co2_inflow",
+            "sensor_temp_out", "sensor_co2_reactor", "sensor_o2_reactor",
+            "sensor_ec_reactor_tank1", "sensor_ph_reactor_tank1",
+            "sensor_ec_reactor_tank2", "sensor_ph_reactor_tank2",
+            "sensor_ec_reactor_tank3", "sensor_ph_reactor_tank3"
+        ];
+
+        // สร้าง UI การ์ดตามจำนวน Topic
+        const dashboard = document.getElementById('dashboard');
+        topics.forEach(topic => {
+            dashboard.innerHTML += `
+                <div class="card">
+                    <div class="label">${topic}</div>
+                    <div class="value" id="${topic}">--</div>
+                </div>
+            `;
+        });
+
+        client.onMessageArrived = (message) => {
+            const topic = message.destinationName;
+            const value = message.payloadString;
+            if (document.getElementById(topic)) {
+                document.getElementById(topic).innerText = value;
+            }
+        };
+
+        client.connect({
+            onSuccess: () => {
+                console.log("Connected to MQTT");
+                topics.forEach(t => client.subscribe(t));
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Station Monitoring</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;500&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #f0f2f5; }
+        .header-bg { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px 0; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .sensor-card { border: none; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: 0.3s; }
+        .sensor-card:hover { transform: translateY(-5px); }
+        .val-text { font-size: 2.5rem; font-weight: 500; color: #1e3c72; }
+        .unit-text { font-size: 1rem; color: #6c757d; }
+        .status-badge { padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; }
+        .online { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .offline { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        .relay-group { display: flex; gap: 12px; justify-content: center; padding: 10px; }
+        .btn-custom { flex: 1; height: 70px; border-radius: 18px !important; font-weight: bold; font-size: 1.2rem; transition: all 0.2s; border: 2px solid transparent; }
+
+        /* สีปุ่มสถานะปกติ (Outline) */
+        .btn-on-outline { border-color: #198754 !important; color: #198754 !important; background-color: white !important; }
+        .btn-off-outline { border-color: #dc3545 !important; color: #dc3545 !important; background-color: white !important; }
+
+        /* สีปุ่มเมื่อ Active (ทึบ) */
+        .btn-on-active { background-color: #198754 !important; color: white !important; border-color: #198754 !important; }
+        .btn-off-active { background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important; }
+    </style>
+</head>
+<body>
+
+<div class="header-bg">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="mb-0">Weather Station Gateway</h2>
+            <small id="sensor-id-display">ID: Waiting for data...</small>
+        </div>
+        <div id="conn-status" class="status-badge offline">● Disconnected</div>
+    </div>
+</div>
+
+<div class="container text-center">
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card sensor-card p-4">
+                <h6 class="text-muted mb-2">อุณหภูมิ</h6>
+                <div class="val-text"><span id="temp">--</span><span class="unit-text">°C</span></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card sensor-card p-4">
+                <h6 class="text-muted mb-2">ความชื้นสัมพัทธ์</h6>
+                <div class="val-text"><span id="hum">--</span><span class="unit-text">%</span></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card sensor-card p-4">
+                <h6 class="text-muted mb-2">ความกดอากาศ</h6>
+                <div class="val-text"><span id="pres">--</span><span class="unit-text">hPa</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <h4 class="mb-4">สวิตช์ควบคุม Relay (G26 - G32)</h4>
+            <div class="row g-4 justify-content-center">
+                <script>
+                    const relays = [
+                        { id: 'G26', name: 'สวิตช์ 1' },
+                        { id: 'G25', name: 'สวิตช์ 2' },
+                        { id: 'G33', name: 'สวิตช์ 3' },
+                        { id: 'G32', name: 'สวิตช์ 4' }
+                    ];
+                    relays.forEach(r => {
+                        document.write(`
+                            <div class="col-12 col-md-3">
+                                <div class="card sensor-card p-3 shadow-sm">
+                                    <h6 class="mb-3">${r.name}</h6>
+                                    <div class="relay-group">
+                                        <button id="btn-on-${r.id}" onclick="controlRelay('${r.id}', '1')" class="btn btn-custom btn-on-outline">ON</button>
+                                        <button id="btn-off-${r.id}" onclick="controlRelay('${r.id}', '0')" class="btn btn-custom btn-off-active">OFF</button>
+                                    </div>
+                                    <small class="text-muted mt-2 d-block">Topic: ${r.id}</small>
+                                </div>
+                            </div>
+                        `);
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center mt-4 mb-5">
+        <small class="text-muted">Last Update: <span id="last-update">Never</span></small>
+    </div>
+</div>
+
+<script>
+    const BROKER_IP = "localhost"; 
+    const BROKER_PORT = 9001;
+    const TOPIC_WEATHER = "weather/station/data";
+
+    const client = new Paho.MQTT.Client(BROKER_IP, BROKER_PORT, "web_client_" + Math.random().toString(16).substr(2, 4));
+
+    client.onConnectionLost = (resp) => { updateStatus(false); setTimeout(connect, 5000); };
+
+    client.onMessageArrived = (msg) => {
+        const topic = msg.destinationName;
+        const payload = msg.payloadString;
+
+        // 1. รับค่าเซนเซอร์
+        if (topic === TOPIC_WEATHER) {
+            try {
+                const data = JSON.parse(payload);
+                document.getElementById("temp").innerText = data.temperature.toFixed(1);
+                document.getElementById("hum").innerText = data.humidity.toFixed(1);
+                document.getElementById("pres").innerText = data.pressure.toFixed(1);
+                document.getElementById("sensor-id-display").innerText = "ID: " + data.sensor_id;
+                document.getElementById("last-update").innerText = new Date().toLocaleTimeString();
+            } catch (e) { console.error(e); }
+        }
+
+        // 2. รับสถานะยืนยันจาก ESP32 (Feedback)
+        if (topic.startsWith("relay/status/")) {
+            const relayId = topic.split('/').pop();
+            const btnOn = document.getElementById(`btn-on-${relayId}`);
+            const btnOff = document.getElementById(`btn-off-${relayId}`);
+
+            if (payload === "1") {
+                btnOn.className = "btn btn-custom btn-on-active";
+                btnOff.className = "btn btn-custom btn-off-outline";
+            } else {
+                btnOff.className = "btn btn-custom btn-off-active";
+                btnOn.className = "btn btn-custom btn-on-outline";
+            }
+        }
+    };
+
+    function connect() {
+        client.connect({
+            onSuccess: () => { 
+                updateStatus(true); 
+                client.subscribe(TOPIC_WEATHER);
+                relays.forEach(r => client.subscribe("relay/status/" + r.id));
+            },
+            onFailure: (err) => { updateStatus(false); setTimeout(connect, 5000); },
+            useSSL: false
+        });
+    }
+
+    function updateStatus(isOnline) {
+        const el = document.getElementById("conn-status");
+        el.innerHTML = isOnline ? "● Connected" : "● Disconnected";
+        el.className = isOnline ? "status-badge online" : "status-badge offline";
+    }
+
+    function controlRelay(topic, val) {
+        if (client.isConnected()) {
+            const message = new Paho.MQTT.Message(val);
+            message.destinationName = topic;
+            client.send(message);
+            // หมายเหตุ: เราไม่เปลี่ยนสีปุ่มที่นี่ แต่จะรอเปลี่ยนใน onMessageArrived แทน
+        } else {
+            alert("MQTT Disconnected!");
+        }
+    }
+
+    connect();
+</script>
+</body>
+</html>
