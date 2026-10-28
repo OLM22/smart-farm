@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
 import { 
   MapPin, 
   RefreshCw, 
@@ -21,6 +22,11 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
   const [mapLayer, setMapLayer] = useState<'satellite' | 'street' | 'terrain'>('satellite');
   const [selectedFarm, setSelectedFarm] = useState<string>('farm-001');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const markersRef = useRef<Record<string, L.Marker>>({});
 
   const farms: FarmLocation[] = [
     {
@@ -61,6 +67,153 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
     }
   ];
 
+  // Tile URL providers
+  const getTileUrl = (layer: 'satellite' | 'street' | 'terrain') => {
+    switch (layer) {
+      case 'satellite':
+        return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+      case 'terrain':
+        return 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+      case 'street':
+      default:
+        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    }
+  };
+
+  const getTileAttribution = (layer: 'satellite' | 'street' | 'terrain') => {
+    switch (layer) {
+      case 'satellite':
+        return 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
+      case 'terrain':
+        return 'Map data: &copy; OpenTopoMap (CC-BY-SA)';
+      case 'street':
+      default:
+        return '&copy; OpenStreetMap contributors';
+    }
+  };
+
+  // Initialize Leaflet map
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    if (mapInstanceRef.current) return;
+
+    // Center on Thailand
+    const map = L.map(mapContainerRef.current, {
+      center: [14.5, 100.8],
+      zoom: 6,
+      zoomControl: false,
+      attributionControl: false
+    });
+
+    const tileLayer = L.tileLayer(getTileUrl('satellite'), {
+      maxZoom: 19,
+      attribution: getTileAttribution('satellite')
+    }).addTo(map);
+
+    tileLayerRef.current = tileLayer;
+    mapInstanceRef.current = map;
+
+    // Add zoom control at bottom right
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Create markers for each farm with custom CSS pins
+    farms.forEach((farm) => {
+      const isDemo = farm.id === 'farm-001';
+      const isHighland = farm.id === 'farm-004';
+      const bgColor = isHighland ? '#f59e0b' : '#10b981';
+      const iconEmoji = isHighland ? '📍' : isDemo ? '🌾' : '🌱';
+
+      const customIcon = L.divIcon({
+        className: 'custom-farm-pin',
+        html: `
+          <div style="
+            width: 38px;
+            height: 38px;
+            border-radius: 50% 50% 50% 0;
+            background: ${bgColor};
+            transform: rotate(-45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 16px ${bgColor}99;
+            border: 2px solid #ffffff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          ">
+            <span style="transform: rotate(45deg); color: #fff; font-size: 14px; font-weight: bold;">
+              ${iconEmoji}
+            </span>
+          </div>
+        `,
+        iconSize: [38, 38],
+        iconAnchor: [19, 38],
+        popupAnchor: [0, -38]
+      });
+
+      const marker = L.marker([farm.lat, farm.lng], { icon: customIcon }).addTo(map);
+
+      // Popup
+      const popupHtml = `
+        <div style="font-family: sans-serif; color: #0f172a; min-width: 180px;">
+          <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px;">${farm.name}</div>
+          <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">พิกัด: ${farm.lat.toFixed(4)}, ${farm.lng.toFixed(4)}</div>
+          <div style="display: inline-block; background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: bold; margin-bottom: 8px;">● ${farm.status}</div>
+          <div style="font-size: 12px; color: #334155; line-height: 1.4;">${farm.description}</div>
+        </div>
+      `;
+      marker.bindPopup(popupHtml);
+
+      marker.on('click', () => {
+        setSelectedFarm(farm.id);
+      });
+
+      markersRef.current[farm.id] = marker;
+    });
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  // Update tile layer when layer state changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !tileLayerRef.current) return;
+    mapInstanceRef.current.removeLayer(tileLayerRef.current);
+
+    const newLayer = L.tileLayer(getTileUrl(mapLayer), {
+      maxZoom: 19,
+      attribution: getTileAttribution(mapLayer)
+    }).addTo(mapInstanceRef.current);
+
+    tileLayerRef.current = newLayer;
+  }, [mapLayer]);
+
+  // Handle Fly-To farm
+  const handleFlyTo = (farm: FarmLocation) => {
+    setSelectedFarm(farm.id);
+    if (!mapInstanceRef.current) return;
+
+    mapInstanceRef.current.flyTo([farm.lat, farm.lng], 13, {
+      duration: 1.5,
+      easeLinearity: 0.25
+    });
+
+    const marker = markersRef.current[farm.id];
+    if (marker) {
+      setTimeout(() => {
+        marker.openPopup();
+      }, 1500);
+    }
+  };
+
+  // Handle Fit All
+  const handleFitAll = () => {
+    if (!mapInstanceRef.current) return;
+    const bounds = L.latLngBounds(farms.map(f => [f.lat, f.lng]));
+    mapInstanceRef.current.fitBounds(bounds, { padding: [60, 60] });
+  };
+
   const filteredFarms = farms.filter(f => 
     f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     f.id.toLowerCase().includes(searchQuery.toLowerCase())
@@ -96,7 +249,7 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
           </p>
         </div>
 
-        <button className="btn" style={{ background: 'rgba(255, 255, 255, 0.08)' }}>
+        <button className="btn" style={{ background: 'rgba(255, 255, 255, 0.08)' }} onClick={handleFitAll}>
           <RefreshCw size={15} />
           Refresh GIS Data
         </button>
@@ -149,44 +302,30 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
         gap: '20px',
         alignItems: 'stretch'
       }}>
-        {/* Interactive GIS Map Canvas Area */}
+        {/* Real Leaflet Map Container */}
         <div className="glass-panel" style={{
           position: 'relative',
-          minHeight: '620px',
+          minHeight: '640px',
           borderRadius: '20px',
           overflow: 'hidden',
           background: '#09101c',
           border: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
-          {/* Simulated Satellite Terrain Map Background */}
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundImage: `radial-gradient(ellipse at 40% 60%, rgba(30, 58, 40, 0.9), rgba(10, 20, 35, 0.98)),
-              repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 40px),
-              repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 40px)`,
-            filter: 'contrast(1.15) brightness(0.95)'
-          }}>
-            {/* Thailand Map Contour Overlay */}
-            <svg viewBox="0 0 800 600" style={{ width: '100%', height: '100%', opacity: 0.65 }}>
-              <path
-                d="M 380 80 Q 420 120 400 200 Q 450 240 430 310 Q 390 350 370 410 Q 360 480 340 550"
-                fill="none"
-                stroke="rgba(16, 185, 129, 0.15)"
-                strokeWidth="60"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 380 80 Q 420 120 400 200 Q 450 240 430 310 Q 390 350 370 410 Q 360 480 340 550"
-                fill="none"
-                stroke="rgba(6, 182, 212, 0.25)"
-                strokeWidth="2"
-                strokeDasharray="6 4"
-              />
-            </svg>
-          </div>
+          {/* Map Mount Point */}
+          <div 
+            ref={mapContainerRef} 
+            style={{ 
+              width: '100%', 
+              height: '100%', 
+              minHeight: '640px',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 1
+            }} 
+          />
 
           {/* Top-Left Map Controls: Satellite / Street / Terrain */}
           <div style={{
@@ -196,11 +335,12 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
             zIndex: 10,
             display: 'flex',
             gap: '4px',
-            background: 'rgba(10, 15, 26, 0.85)',
-            backdropFilter: 'blur(10px)',
+            background: 'rgba(10, 15, 26, 0.9)',
+            backdropFilter: 'blur(12px)',
             padding: '5px',
             borderRadius: '12px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
           }}>
             <button
               onClick={() => setMapLayer('satellite')}
@@ -208,11 +348,12 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
                 background: mapLayer === 'satellite' ? '#ffffff' : 'transparent',
                 color: mapLayer === 'satellite' ? '#000000' : '#cbd5e1',
                 border: 'none',
-                padding: '6px 14px',
+                padding: '7px 16px',
                 borderRadius: '8px',
-                fontSize: '0.8rem',
+                fontSize: '0.82rem',
                 fontWeight: 700,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
             >
               Satellite
@@ -223,11 +364,12 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
                 background: mapLayer === 'street' ? '#ffffff' : 'transparent',
                 color: mapLayer === 'street' ? '#000000' : '#cbd5e1',
                 border: 'none',
-                padding: '6px 14px',
+                padding: '7px 16px',
                 borderRadius: '8px',
-                fontSize: '0.8rem',
+                fontSize: '0.82rem',
                 fontWeight: 700,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
             >
               Street
@@ -238,11 +380,12 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
                 background: mapLayer === 'terrain' ? '#ffffff' : 'transparent',
                 color: mapLayer === 'terrain' ? '#000000' : '#cbd5e1',
                 border: 'none',
-                padding: '6px 14px',
+                padding: '7px 16px',
                 borderRadius: '8px',
-                fontSize: '0.8rem',
+                fontSize: '0.82rem',
                 fontWeight: 700,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
             >
               Terrain
@@ -261,19 +404,43 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
             <div style={{
               display: 'flex',
               gap: '4px',
-              background: 'rgba(10, 15, 26, 0.85)',
-              backdropFilter: 'blur(10px)',
+              background: 'rgba(10, 15, 26, 0.9)',
+              backdropFilter: 'blur(12px)',
               padding: '5px',
               borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
             }}>
-              <button className="btn" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
+              <button 
+                className="btn" 
+                style={{ padding: '6px 12px', fontSize: '0.78rem' }}
+                onClick={handleFitAll}
+              >
                 <Crosshair size={13} /> Fit All
               </button>
-              <button className="btn" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
+              <button 
+                className="btn" 
+                style={{ padding: '6px 12px', fontSize: '0.78rem' }}
+                onClick={() => {
+                  const target = farms.find(f => f.id === selectedFarm);
+                  if (target) handleFlyTo(target);
+                }}
+              >
                 <Layers size={13} /> Focus
               </button>
-              <button className="btn" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
+              <button 
+                className="btn" 
+                style={{ padding: '6px 12px', fontSize: '0.78rem' }}
+                onClick={() => {
+                  if (mapContainerRef.current) {
+                    if (!document.fullscreenElement) {
+                      mapContainerRef.current.requestFullscreen().catch(() => {});
+                    } else {
+                      document.exitFullscreen().catch(() => {});
+                    }
+                  }
+                }}
+              >
                 <Maximize2 size={13} /> Full
               </button>
             </div>
@@ -287,103 +454,14 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
             zIndex: 10,
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px'
+            gap: '8px',
+            pointerEvents: 'none'
           }}>
-            <div className="badge" style={{ background: 'rgba(10, 15, 26, 0.8)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399' }}>
-              <span className="pulse-dot" /> แผนที่พร้อมใช้งาน ZOOM 6
+            <div className="badge" style={{ background: 'rgba(10, 15, 26, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#34d399' }}>
+              <span className="pulse-dot" /> แผนที่ดาวเทียมความละเอียดสูง (Live GIS)
             </div>
-            <div className="badge" style={{ background: 'rgba(10, 15, 26, 0.8)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#94a3b8' }}>
+            <div className="badge" style={{ background: 'rgba(10, 15, 26, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#94a3b8' }}>
               GIS Layer: {mapLayer.toUpperCase()}
-            </div>
-          </div>
-
-          {/* Interactive Farm Pins on Map */}
-          {/* 1. Chiang Mai Pin */}
-          <div
-            onClick={() => setSelectedFarm('farm-004')}
-            style={{
-              position: 'absolute',
-              top: '22%',
-              left: '42%',
-              transform: 'translate(-50%, -50%)',
-              cursor: 'pointer',
-              zIndex: 20
-            }}
-          >
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50% 50% 50% 0',
-              background: selectedFarm === 'farm-004' ? '#f59e0b' : '#ea580c',
-              transform: 'rotate(-45deg)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 16px rgba(245, 158, 11, 0.7)',
-              transition: 'all 0.3s ease'
-            }}>
-              <span style={{ transform: 'rotate(45deg)', color: '#fff', fontWeight: 800, fontSize: '0.75rem' }}>
-                📍
-              </span>
-            </div>
-          </div>
-
-          {/* 2. Bangkok Demo Center Pin */}
-          <div
-            onClick={() => setSelectedFarm('farm-001')}
-            style={{
-              position: 'absolute',
-              top: '56%',
-              left: '47%',
-              transform: 'translate(-50%, -50%)',
-              cursor: 'pointer',
-              zIndex: 20
-            }}
-          >
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50% 50% 50% 0',
-              background: selectedFarm === 'farm-001' ? '#10b981' : '#059669',
-              transform: 'rotate(-45deg)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 20px rgba(16, 185, 129, 0.8)',
-              transition: 'all 0.3s ease'
-            }}>
-              <span style={{ transform: 'rotate(45deg)', color: '#fff', fontWeight: 800, fontSize: '0.85rem' }}>
-                🌾
-              </span>
-            </div>
-          </div>
-
-          {/* 3. Chonburi Pin */}
-          <div
-            onClick={() => setSelectedFarm('farm-003')}
-            style={{
-              position: 'absolute',
-              top: '64%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              cursor: 'pointer',
-              zIndex: 20
-            }}
-          >
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50% 50% 50% 0',
-              background: selectedFarm === 'farm-003' ? '#10b981' : '#0d9488',
-              transform: 'rotate(-45deg)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 16px rgba(16, 185, 129, 0.6)'
-            }}>
-              <span style={{ transform: 'rotate(45deg)', color: '#fff', fontWeight: 800, fontSize: '0.75rem' }}>
-                🌱
-              </span>
             </div>
           </div>
         </div>
@@ -437,13 +515,13 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
             </div>
 
             {/* Farm Cards List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '420px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '440px', overflowY: 'auto' }}>
               {filteredFarms.map((farm) => {
                 const isSelected = selectedFarm === farm.id;
                 return (
                   <div
                     key={farm.id}
-                    onClick={() => setSelectedFarm(farm.id)}
+                    onClick={() => handleFlyTo(farm)}
                     style={{
                       padding: '16px',
                       borderRadius: '14px',
