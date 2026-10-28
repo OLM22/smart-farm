@@ -1,3 +1,20 @@
+export interface User {
+  email: string;
+  name: string;
+  role: string;
+  farmScope: string;
+}
+
+export interface FarmLocation {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  status: 'ACTIVE' | 'MAINTENANCE' | 'OFFLINE';
+  zonesCount: number;
+  description: string;
+}
+
 export interface SensorData {
   s_temp: number;       // Soil Temp (°C)
   s_hmd: number;        // Soil Humidity (%)

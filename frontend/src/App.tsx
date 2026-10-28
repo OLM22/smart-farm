@@ -1,30 +1,50 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from './api';
-import type { SensorRecord, AlertRule, AlertLog, DeviceControl } from './types';
-import { Navigation } from './components/Navigation';
-import { OverviewTab } from './components/OverviewTab';
-import { HistoryTab } from './components/HistoryTab';
-import { AlertsTab } from './components/AlertsTab';
+import type { SensorRecord, AlertRule, AlertLog, DeviceControl, User } from './types';
+import { Sidebar, type NavItemKey } from './components/Sidebar';
+import { TopNavbar } from './components/TopNavbar';
+import { LoginPage } from './components/LoginPage';
+import { DashboardTab } from './components/DashboardTab';
+import { GisMapTab } from './components/GisMapTab';
 import { ControlsTab } from './components/ControlsTab';
+import { AlertsTab } from './components/AlertsTab';
+import { HistoryTab } from './components/HistoryTab';
+import { EdgeGatewayTab } from './components/EdgeGatewayTab';
+import { ZonesTab } from './components/ZonesTab';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'alerts' | 'controls'>('overview');
-  
-  // Data states
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('cru_farm_user');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    // Default user as requested
+    return {
+      email: 'olm22@gmail.com',
+      name: 'olm22',
+      role: 'SUPER_ADMIN',
+      farmScope: 'ALL_FARMS'
+    };
+  });
+
+  // Navigation & UI States
+  const [activeNav, setActiveNav] = useState<NavItemKey>('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [hours, setHours] = useState(24);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [serverOnline, setServerOnline] = useState(true);
+
+  // Data States
   const [latest, setLatest] = useState<SensorRecord | null>(null);
   const [records, setRecords] = useState<SensorRecord[]>([]);
-  const [totalLogs, setTotalLogs] = useState<number>(0);
-  const [unreadAlerts, setUnreadAlerts] = useState<number>(0);
+  const [totalLogs, setTotalLogs] = useState(0);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [alertLogs, setAlertLogs] = useState<AlertLog[]>([]);
   const [devices, setDevices] = useState<DeviceControl[]>([]);
-  
-  // UI states
-  const [hours, setHours] = useState<number>(24);
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [serverOnline, setServerOnline] = useState<boolean>(true);
 
-  // Poll latest telemetry
+  // Telemetry Poll
   const refreshLatest = useCallback(async () => {
     try {
       const data = await api.getLatestSensors();
@@ -39,7 +59,6 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Fetch historical data
   const refreshHistory = useCallback(async () => {
     try {
       const data = await api.getHistory(hours, 100);
@@ -51,7 +70,6 @@ export const App: React.FC = () => {
     }
   }, [hours]);
 
-  // Fetch alert rules and logs
   const refreshAlerts = useCallback(async () => {
     try {
       const [rData, lData] = await Promise.all([api.getAlertRules(), api.getAlertLogs(50)]);
@@ -62,7 +80,6 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Fetch device controls
   const refreshDevices = useCallback(async () => {
     try {
       const data = await api.getDeviceControls();
@@ -76,25 +93,35 @@ export const App: React.FC = () => {
 
   // Initial load
   useEffect(() => {
-    refreshLatest();
-    refreshHistory();
-    refreshAlerts();
-    refreshDevices();
-  }, [refreshLatest, refreshHistory, refreshAlerts, refreshDevices]);
+    if (currentUser) {
+      refreshLatest();
+      refreshHistory();
+      refreshAlerts();
+      refreshDevices();
+    }
+  }, [currentUser, refreshLatest, refreshHistory, refreshAlerts, refreshDevices]);
 
   // Polling loop
   useEffect(() => {
+    if (!currentUser) return;
+
     const timer = setInterval(() => {
       refreshLatest();
-      if (activeTab === 'history') refreshHistory();
-      if (activeTab === 'alerts') refreshAlerts();
-      if (activeTab === 'controls') refreshDevices();
+      if (activeNav === 'reports') refreshHistory();
+      if (activeNav === 'alerts') refreshAlerts();
+      if (activeNav === 'controls') refreshDevices();
     }, 3000);
 
     return () => clearInterval(timer);
-  }, [activeTab, refreshLatest, refreshHistory, refreshAlerts, refreshDevices]);
+  }, [currentUser, activeNav, refreshLatest, refreshHistory, refreshAlerts, refreshDevices]);
 
-  // Handlers
+  // Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem('cru_farm_user');
+    setCurrentUser(null);
+  };
+
+  // Simulate sync packet
   const handleSimulate = async () => {
     setIsSyncing(true);
     try {
@@ -146,75 +173,141 @@ export const App: React.FC = () => {
     }
   };
 
-  return (
-    <div className="container">
-      {/* Offline Alert if Backend is not running */}
-      {!serverOnline && (
-        <div style={{
-          background: 'rgba(244, 63, 94, 0.2)',
-          border: '1px solid var(--accent-rose)',
-          borderRadius: '12px',
-          padding: '12px 18px',
-          marginBottom: '16px',
-          color: '#fecdd3',
-          fontSize: '0.875rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span>⚠️ ไม่สามารถเชื่อมต่อกับ PHP REST Backend ได้ที่ <strong>http://localhost:8000</strong> กรุณาตรวจสอบว่ารัน backend อยู่หรือไม่</span>
-          <button className="btn btn-danger" onClick={refreshLatest}>ลองเชื่อมต่อใหม่</button>
-        </div>
-      )}
+  // If user is not logged in, render LoginPage
+  if (!currentUser) {
+    return <LoginPage onLogin={(user) => setCurrentUser(user)} />;
+  }
 
-      {/* Navigation & Header */}
-      <Navigation
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        isSyncing={isSyncing}
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      {/* 1. Left Sidebar matching Screenshot layout */}
+      <Sidebar
+        activeNav={activeNav}
+        setActiveNav={setActiveNav}
+        user={currentUser}
         unreadAlerts={unreadAlerts}
-        onSimulate={handleSimulate}
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
       />
 
-      {/* Main Tab Content */}
-      <main style={{ minHeight: '650px' }}>
-        {activeTab === 'overview' && (
-          <OverviewTab latest={latest} records={records} totalLogs={totalLogs} />
+      {/* 2. Main Content View Area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Top Navbar with user's email */}
+        <TopNavbar
+          user={currentUser}
+          onLogout={handleLogout}
+          collapsed={sidebarCollapsed}
+          setCollapsed={setSidebarCollapsed}
+          onSimulate={handleSimulate}
+          isSyncing={isSyncing}
+        />
+
+        {/* Offline Warning Notice if PHP server unreachable */}
+        {!serverOnline && (
+          <div style={{
+            background: 'rgba(244, 63, 94, 0.2)',
+            borderBottom: '1px solid var(--accent-rose)',
+            padding: '10px 24px',
+            color: '#fecdd3',
+            fontSize: '0.82rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span>⚠️ ไม่สามารถเชื่อมต่อกับ PHP REST Backend ได้ที่ <strong>http://localhost:8000</strong> กรุณาตรวจสอบว่าเซิร์ฟเวอร์รันอยู่หรือไม่</span>
+            <button className="btn btn-danger" style={{ padding: '3px 10px', fontSize: '0.75rem' }} onClick={refreshLatest}>
+              ลองเชื่อมต่อใหม่
+            </button>
+          </div>
         )}
 
-        {activeTab === 'history' && (
-          <HistoryTab records={records} hours={hours} setHours={setHours} />
-        )}
+        {/* Content Tabs */}
+        <main style={{ flex: 1, padding: '24px 28px', overflowY: 'auto' }}>
+          {activeNav === 'dashboard' && (
+            <DashboardTab
+              latest={latest}
+              records={records}
+              totalLogs={totalLogs}
+              unreadAlerts={unreadAlerts}
+              onRefresh={refreshLatest}
+              onOpenGatewayOps={() => setActiveNav('edge_gateway')}
+            />
+          )}
 
-        {activeTab === 'alerts' && (
-          <AlertsTab
-            rules={rules}
-            logs={alertLogs}
-            onUpdateRule={handleUpdateRule}
-            onMarkRead={handleMarkRead}
-          />
-        )}
+          {activeNav === 'gis_map' && (
+            <GisMapTab
+              onSelectFarmForDashboard={() => setActiveNav('dashboard')}
+            />
+          )}
 
-        {activeTab === 'controls' && (
-          <ControlsTab
-            devices={devices}
-            onToggleDevice={handleToggleDevice}
-            onToggleAutoMode={handleToggleAutoMode}
-          />
-        )}
-      </main>
+          {activeNav === 'controls' && (
+            <ControlsTab
+              devices={devices}
+              onToggleDevice={handleToggleDevice}
+              onToggleAutoMode={handleToggleAutoMode}
+            />
+          )}
 
-      {/* Footer */}
-      <footer style={{
-        marginTop: '40px',
-        padding: '24px 0',
-        textAlign: 'center',
-        borderTop: '1px solid var(--surface-border)',
-        color: 'var(--text-muted)',
-        fontSize: '0.8rem'
-      }}>
-        Smart Farm AIoT System &copy; 2026 &bull; ESP32 LoRa ➔ Raspberry Pi Gateway &bull; PHP REST Backend &bull; React Frontend
-      </footer>
+          {activeNav === 'zones' && (
+            <ZonesTab latest={latest} />
+          )}
+
+          {activeNav === 'alerts' && (
+            <AlertsTab
+              rules={rules}
+              logs={alertLogs}
+              onUpdateRule={handleUpdateRule}
+              onMarkRead={handleMarkRead}
+            />
+          )}
+
+          {activeNav === 'reports' && (
+            <HistoryTab
+              records={records}
+              hours={hours}
+              setHours={setHours}
+            />
+          )}
+
+          {activeNav === 'edge_gateway' && (
+            <EdgeGatewayTab
+              latest={latest}
+              totalLogs={totalLogs}
+              onRefresh={refreshLatest}
+            />
+          )}
+
+          {['hardware', 'users', 'database', 'settings'].includes(activeNav) && (
+            <div className="glass-panel" style={{ padding: '36px', textAlign: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '8px' }}>
+                ระบบจัดการ {activeNav === 'hardware' ? 'ฮาร์ดแวร์ & OTA' : activeNav === 'users' ? 'ผู้ใช้และสิทธิ์' : activeNav === 'database' ? 'ฐานข้อมูล' : 'ตั้งค่าระบบฟาร์ม'}
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '20px' }}>
+                ผู้ดูแลระบบ: <strong>{currentUser.email}</strong> &bull; สิทธิ์: <strong>{currentUser.role}</strong>
+              </p>
+              <div className="badge badge-emerald">พร้อมใช้งานภายใต้ Farm Scope: {currentUser.farmScope}</div>
+            </div>
+          )}
+        </main>
+
+        {/* Footer */}
+        <footer style={{
+          padding: '16px 28px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.78rem',
+          color: 'var(--text-muted)'
+        }}>
+          <div>
+            CRU Smart Farm &copy; 2026 &bull; Multi-Farm IoT Monitoring, Automation and Remote Control Platform
+          </div>
+          <div>
+            ผู้ใช้งาน: <strong style={{ color: '#34d399' }}>{currentUser.email}</strong>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 };
