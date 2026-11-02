@@ -19,6 +19,25 @@
 #include <time.h>
 
 // ==========================================
+// โครงสร้างข้อมูลเซนเซอร์ (วางไว้บนสุดเพื่อป้องกัน Arduino Prototype Error)
+// ==========================================
+typedef struct {
+  float soil_temp;       // s_temp
+  float soil_humidity;   // s_hmd
+  float water_temp;      // w_temp
+  float air_humidity;    // a_hmd
+  float water_ph;        // p_water
+  float water_ec;        // e_water
+  float light_intensity; // l_int
+  float air_temp;        // s_temp_s
+  float wind_speed;      // w_speed
+  float water_level;     // w_level
+  float flow_rate;       // f_rate
+  const char* current_status;  // c_stat
+  const char* feedback_status; // f_stat
+} FarmSensorData;
+
+// ==========================================
 // 1. การกำหนดขาพิน (Hardware Pinout)
 // ==========================================
 #define LORA_SCK       18
@@ -30,6 +49,10 @@
 
 #define PIN_BOOT_BTN    0   // ปุ่ม BOOT บนบอร์ด ESP32 (Active Low)
 #define PIN_STATUS_LED  2   // Onboard LED (GPIO 2)
+
+// สำหรับบอร์ด ESP32 ส่วนใหญ่ที่เป็น Active-LOW (LOW = ไฟติด, HIGH = ไฟดับ)
+#define LED_ON          LOW
+#define LED_OFF         HIGH
 
 // ==========================================
 // 2. การตั้งค่า LoRa & โหนด
@@ -49,15 +72,17 @@ const unsigned long SEND_INTERVAL_MS = 5000; // รอบการส่งข�
 // ==========================================
 unsigned long lastSendTime = 0;
 bool isConfigPortalActive = false;
+unsigned long bootButtonPressStart = 0;
+bool bootButtonPressed = false;
 
 // ==========================================
 // 4. ฟังก์ชันไฟแสดงสถานะ LED
 // ==========================================
 void blinkLed(int times, int delayMs) {
   for (int i = 0; i < times; i++) {
-    digitalWrite(PIN_STATUS_LED, HIGH);
+    digitalWrite(PIN_STATUS_LED, LED_ON);
     delay(delayMs);
-    digitalWrite(PIN_STATUS_LED, LOW);
+    digitalWrite(PIN_STATUS_LED, LED_OFF);
     delay(delayMs);
   }
 }
@@ -69,63 +94,56 @@ void configModeCallback(WiFiManager *myWiFiManager) {
   Serial.printf("[WiFiManager] Connect to SSID: %s | IP: %s\n", 
                 myWiFiManager->getConfigPortalSSID().c_str(), 
                 WiFi.softAPIP().toString().c_str());
+  Serial.println("[WiFiManager] Open browser to http://192.168.4.1 to configure WiFi");
 }
 
-// ตรวจสอบการกดปุ่ม BOOT ขณะเปิดเครื่อง
-void checkBootButtonForConfig() {
-  pinMode(PIN_BOOT_BTN, INPUT_PULLUP);
-  
-  // ตรวจสอบว่าปุ่มถูกกดค้างไว้ตอนบู๊ตหรือไม่ (กดค้างประมาณ 3 วินาที)
+// ตรวจสอบการกดปุ่ม BOOT ค้าง 3 วินาที (กดได้ตลอดเวลาขณะเครื่องทำงาน)
+void checkBootButtonLoop() {
   if (digitalRead(PIN_BOOT_BTN) == LOW) {
-    Serial.println("[BOOT] Boot button held detected. Checking duration...");
-    unsigned long pressStart = millis();
-    bool confirmed = true;
-
-    while (millis() - pressStart < 3000) {
-      if (digitalRead(PIN_BOOT_BTN) == HIGH) {
-        confirmed = false;
-        break;
-      }
-      digitalWrite(PIN_STATUS_LED, !digitalRead(PIN_STATUS_LED));
-      delay(100);
-    }
-
-    if (confirmed) {
-      Serial.println("[WiFiManager] Starting On-Demand Configuration Portal...");
-      WiFiManager wm;
-      wm.setAPCallback(configModeCallback);
-      wm.setConfigPortalTimeout(180); // ปิด AP อัตโนมัติใน 3 นาทีหากไม่มีการเชื่อมต่อ
-
-      String apName = "SmartFarm_Setup_" + String((uint32_t)ESP.getEfuseMac(), HEX);
-      if (!wm.startConfigPortal(apName.c_str(), "smartfarm1234")) {
-        Serial.println("[WiFiManager] Configuration timeout or failed to connect.");
+    if (!bootButtonPressed) {
+      bootButtonPressed = true;
+      bootButtonPressStart = millis();
+      Serial.println("[BOOT] Button pressed. Hold for 3 seconds to enter WiFi Config...");
+    } else {
+      if ((millis() / 150) % 2 == 0) {
+        digitalWrite(PIN_STATUS_LED, LED_ON);
       } else {
-        Serial.println("[WiFiManager] WiFi Configured & Connected Successfully!");
+        digitalWrite(PIN_STATUS_LED, LED_OFF);
       }
-      isConfigPortalActive = false;
+
+      if (millis() - bootButtonPressStart >= 3000) {
+        Serial.println("\n==========================================");
+        Serial.println("[WiFiManager] Starting Configuration Portal...");
+        Serial.println("==========================================");
+        digitalWrite(PIN_STATUS_LED, LED_ON);
+
+        WiFiManager wm;
+        wm.setAPCallback(configModeCallback);
+        wm.setConfigPortalTimeout(180);
+
+        String apName = "SmartFarm_Setup_" + String((uint32_t)ESP.getEfuseMac(), HEX);
+        if (!wm.startConfigPortal(apName.c_str(), "smartfarm1234")) {
+          Serial.println("[WiFiManager] Configuration timeout or closed.");
+        } else {
+          Serial.println("[WiFiManager] WiFi Configured & Connected Successfully!");
+        }
+        isConfigPortalActive = false;
+        bootButtonPressed = false;
+        digitalWrite(PIN_STATUS_LED, LED_ON);
+      }
+    }
+  } else {
+    if (bootButtonPressed) {
+      bootButtonPressed = false;
+      digitalWrite(PIN_STATUS_LED, LED_ON);
+      Serial.println("[BOOT] Released before 3 seconds. Cancelled.");
     }
   }
 }
 
 // ==========================================
-// 5. โครงสร้างและฟังก์ชันอ่าน/จำลองข้อมูลเซนเซอร์
+// 5. ฟังก์ชันอ่าน/จำลองข้อมูลเซนเซอร์
 // ==========================================
-struct FarmSensorData {
-  float soil_temp;       // s_temp
-  float soil_humidity;   // s_hmd
-  float water_temp;      // w_temp
-  float air_humidity;    // a_hmd
-  float water_ph;        // p_water
-  float water_ec;        // e_water
-  float light_intensity; // l_int
-  float air_temp;        // s_temp_s
-  float wind_speed;      // w_speed
-  float water_level;     // w_level
-  float flow_rate;       // f_rate
-  const char* current_status;  // c_stat
-  const char* feedback_status; // f_stat
-};
-
 FarmSensorData readFarmSensors() {
   FarmSensorData data;
   
@@ -185,12 +203,11 @@ void setup() {
   Serial.println("  Smart Farm - ESP32 LoRa Sender Node");
   Serial.println("==========================================");
 
-  // ตั้งค่าไฟแสดงสถานะ
+  pinMode(PIN_BOOT_BTN, INPUT_PULLUP);
   pinMode(PIN_STATUS_LED, OUTPUT);
-  digitalWrite(PIN_STATUS_LED, LOW);
-
-  // ตรวจสอบเงื่อนไขปุ่ม BOOT เพื่อเข้าสู่ WiFiManager
-  checkBootButtonForConfig();
+  digitalWrite(PIN_STATUS_LED, LED_ON);
+  delay(500);
+  digitalWrite(PIN_STATUS_LED, LED_OFF);
 
   // กำหนดขา SPI สำหรับโมดูล LoRa ตามสเปก
   SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_NSS);
@@ -218,11 +235,15 @@ void setup() {
   Serial.println("[LoRa] Initialized successfully.");
   
   // โหมดปกติ: เปิดไฟ LED ค้างเพื่อแสดงสถานะทำงานปกติ
-  digitalWrite(PIN_STATUS_LED, HIGH);
-  Serial.println("[Status] Normal Mode Active (Status LED ON)\n");
+  digitalWrite(PIN_STATUS_LED, LED_ON);
+  Serial.println("[Status] Normal Mode Active (Status LED ON)");
+  Serial.println("[Tip] สามารถกดปุ่ม BOOT ค้างไว้ 3 วินาที เพื่อเปิด WiFi AP ตั้งค่าได้ตลอดเวลา\n");
 }
 
 void loop() {
+  // ตรวจจับปุ่ม BOOT (กดค้าง 3 วิเพื่อเปิด WiFi Portal)
+  checkBootButtonLoop();
+
   unsigned long currentMillis = millis();
 
   // ส่งข้อมูลเซนเซอร์ตามรอบเวลา
@@ -241,8 +262,8 @@ void loop() {
     LoRa.endPacket();
 
     // ดับไฟ LED สั้นๆ เพื่อแสดงจังหวะการส่งข้อมูล (Blink indication on TX)
-    digitalWrite(PIN_STATUS_LED, LOW);
+    digitalWrite(PIN_STATUS_LED, LED_OFF);
     delay(50);
-    digitalWrite(PIN_STATUS_LED, HIGH);
+    digitalWrite(PIN_STATUS_LED, LED_ON);
   }
 }

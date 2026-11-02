@@ -107,7 +107,7 @@ export const App: React.FC = () => {
 
     const timer = setInterval(() => {
       refreshLatest();
-      if (activeNav === 'reports') refreshHistory();
+      if (activeNav === 'dashboard' || activeNav === 'reports') refreshHistory();
       if (activeNav === 'alerts') refreshAlerts();
       if (activeNav === 'controls') refreshDevices();
     }, 3000);
