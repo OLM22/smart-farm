@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRU Smart Farm — AIoT Presentation Deck (17 Slides Clean PDF)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #059669;
+      --primary-dark: #047857;
+      --primary-light: #ecfdf5;
+      --primary-border: #a7f3d0;
+      --secondary: #0284c7;
+      --secondary-light: #f0f9ff;
+      --secondary-border: #bae6fd;
+      --accent: #d97706;
+      --accent-light: #fffbeb;
+      --danger: #dc2626;
+      --danger-light: #fef2f2;
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --border: #e2e8f0;
+      --bg-page: #cbd5e1;
+      --bg-slide: #ffffff;
+      --bg-soft: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.5;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Sticky Top Toolbar */
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .toolbar-badge {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 4px 12px;
+      border-radius: 999px;
+    }
+
+    .toolbar-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .toolbar-hint {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .btn-print {
+      background: #10b981;
+      color: #052e16;
+      border: none;
+      padding: 9px 22px;
+      border-radius: 8px;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 14.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+    }
+
+    .btn-print:hover {
+      background: #34d399;
+    }
+
+    /* Slide Layout (16:9 Widescreen 1280x720) */
+    .deck {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 0 60px;
+      gap: 28px;
+    }
+
+    .slide {
+      width: 1280px;
+      height: 720px;
+      background: var(--bg-slide);
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+      padding: 44px 58px 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+      border: 1px solid #cbd5e1;
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 8px;
+      background: linear-gradient(90deg, #059669 0%, #0284c7 55%, #7c3aed 100%);
+    }
+
+    /* Cover Slide Special Styling */
+    .slide-cover {
+      background: radial-gradient(circle at 88% 18%, #d1fae5 0%, rgba(209, 250, 229, 0) 42%),
+                  radial-gradient(circle at 12% 88%, #e0f2fe 0%, rgba(224, 242, 254, 0) 45%),
+                  linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      padding: 52px 64px 42px;
+    }
+
+    .cover-grid {
+      display: grid;
+      grid-template-columns: 1.18fr 0.82fr;
+      gap: 36px;
+      align-items: center;
+      height: 100%;
+    }
+
+    .cover-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ecfdf5;
+      border: 1.5px solid #6ee7b7;
+      color: #047857;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      letter-spacing: 0.6px;
+      margin-bottom: 18px;
+    }
+
+    .cover-main-title {
+      font-size: 56px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.08;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+
+    .cover-main-title span {
+      background: linear-gradient(90deg, #059669 0%, #0284c7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .cover-subtitle {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1e293b;
+      line-height: 1.4;
+      margin-bottom: 18px;
+    }
+
+    .cover-desc {
+      font-size: 15.5px;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .cover-hw-showcase {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .cover-hw-card {
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+    }
+
+    .cover-hw-card.wide {
+      grid-column: span 2;
+      flex-direction: row;
+      gap: 20px;
+      padding: 16px 22px;
+    }
+
+    .cover-hw-card img {
+      max-height: 145px;
+      object-fit: contain;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .cover-hw-label {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    .slide-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+    }
+
+    .slide-kicker {
+      font-size: 12.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--primary);
+      margin-bottom: 2px;
+    }
+
+    .slide-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .slide-tag {
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 16px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 18px;
+      min-height: 0;
+    }
+
+    .slide-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 10px;
+      margin-top: 14px;
+      font-size: 12.5px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .slide-num {
+      font-weight: 800;
+      color: var(--text-main);
+      background: #f1f5f9;
+      padding: 3px 12px;
+      border-radius: 6px;
+    }
+
+    /* Grids */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .grid-2-wide-left { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; }
+    .grid-2-wide-right { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+    /* Spacious Cards */
+    .card {
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+    }
+
+    .card-green { background: var(--primary-light); border: 1px solid var(--primary-border); }
+    .card-blue { background: var(--secondary-light); border: 1px solid var(--secondary-border); }
+    .card-amber { background: var(--accent-light); border: 1px solid #fde68a; }
+    .card-red { background: var(--danger-light); border: 1px solid #fecaca; }
+    .card-purple { background: var(--purple-light); border: 1px solid #ddd6fe; }
+
+    .card-title {
+      font-size: 17.5px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card p, .card li {
+      font-size: 15px;
+      color: #334155;
+    }
+
+    ul.clean-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    ul.clean-list li {
+      position: relative;
+      padding-left: 18px;
+      line-height: 1.48;
+    }
+
+    ul.clean-list li::before {
+      content: "•";
+      position: absolute;
+      left: 2px;
+      color: var(--primary);
+      font-weight: 900;
+    }
+
+    /* Code & Pills */
+    code, .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-weight: 600;
+    }
+
+    .code-block {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.8px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 16px 18px;
+      border-radius: 10px;
+      line-height: 1.5;
+      overflow: hidden;
+      white-space: pre;
+    }
+
+    .code-block .kw { color: #38bdf8; font-weight: 700; }
+    .code-block .str { color: #34d399; }
+    .code-block .cm { color: #94a3b8; }
+    .code-block .num { color: #fbbf24; }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #0f172a;
+    }
+
+    .pill-green { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+    .pill-blue { background: #e0f2fe; border-color: #7dd3fc; color: #075985; }
+    .pill-purple { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
+    .pill-amber { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+
+    /* Clean Tables */
+    table.clean-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    table.clean-table th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 800;
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    table.clean-table td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+      vertical-align: middle;
+    }
+
+    table.clean-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Image Frame */
+    .img-frame {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .img-frame img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .img-caption {
+      font-size: 13px;
+      color: #475569;
+      font-weight: 700;
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    /* Architecture Flow */
+    .arch-flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .arch-box {
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 14px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .arch-step {
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .arch-title {
+      font-size: 16.5px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    @page {
+      size: 338.67mm 190.5mm;
+      margin: 0;
+    }
+
+    @media print {
+      body { background: #ffffff !important; }
+      .no-print { display: none !important; }
+      .deck { padding: 0 !important; gap: 0 !important; }
+      .slide {
+        width: 1280px !important;
+        height: 720px !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Action Bar -->
+  <div class="toolbar no-print">
+    <div class="toolbar-left">
+      <span class="toolbar-badge">17 SLIDES · EXECUTIVE COVER + HARDWARE</span>
+      <span class="toolbar-title">CRU Smart Farm — สไลด์นำเสนอฉบับสมบูรณ์ (หน้าปกดีไซน์ใหม่ + ภาพอุปกรณ์จริง 3 ชิ้น + แผนที่ GIS)</span>
+      <span class="toolbar-hint">💡 คลิกที่รูปภาพใดก็ได้เพื่อเปลี่ยนรูป หรือกดปุ่มด้านขวาเพื่อบันทึกเป็น PDF</span>
+    </div>
+    <button class="btn-print" onclick="window.print()">
+      🖨️ บันทึกเป็น PDF (Save as PDF)
+    </button>
+  </div>
+
+  <div class="deck">
+
+    <!-- ==================== SLIDE 1: BEAUTIFUL COVER SLIDE ==================== -->
+    <section class="slide slide-cover">
+      <div class="cover-grid">
+        <div>
+          <div class="cover-badge">
+            🌱 CHANDRAKASEM RAJABHAT UNIVERSITY · AIoT PROJECT 2026
+          </div>
+          <h1 class="cover-main-title">
+            CRU <span>Smart Farm</span>
+          </h1>
+          <div class="cover-subtitle">
+            ระบบฟาร์มอัจฉริยะครบวงจรด้วยเทคโนโลยี LoRa 433MHz,<br>Mosquitto MQTT และ Edge Computing บน Raspberry Pi 5
+          </div>
+          <p class="cover-desc">
+            ตรวจวัดสภาพแวดล้อมการเพาะปลูก 12 พารามิเตอร์แบบเรียลไทม์ สำรองข้อมูลอัตโนมัติเมื่ออินเทอร์เน็ตล่ม (Offline-First) พร้อมระบบควบคุมอุปกรณ์อัตโนมัติ แผนที่ดาวเทียม GIS และแจ้งเตือนผ่าน LINE Official Account
+          </p>
+
+          <div class="pill-row" style="margin-bottom: 28px;">
+            <span class="pill pill-green">ESP32 + 4CH Relay</span>
+            <span class="pill pill-blue">LoRa SX1278 433MHz</span>
+            <span class="pill pill-purple">Raspberry Pi 5 Edge</span>
+            <span class="pill pill-amber">React 18 + Leaflet GIS</span>
+            <span class="pill">LINE Messaging API</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 28px; padding-top: 18px; border-top: 2px solid #e2e8f0;">
+            <div>
+              <div style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase;">ผู้พัฒนาโครงการ (Developer)</div>
+              <div style="font-size: 17px; font-weight: 800; color: #0f172a;">OLM · olm22@gmail.com</div>
+            </div>
+            <div style="height: 32px; width: 1.5px; background: #cbd5e1;"></div>
+            <div>
+              <div style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase;">GitHub &amp; Public Domain</div>
+              <div class="mono" style="font-size: 13px;">github.com/OLM22/smart-farm · olmy.duckdns.org</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Visual Hardware Collage -->
+        <div class="cover-hw-showcase">
+          <div class="cover-hw-card wide">
+            <img src="slides_assets/hw_rpi5.jpg" alt="Raspberry Pi 5 Edge Gateway" style="max-height: 155px;" />
+            <div>
+              <div style="font-size: 12px; font-weight: 800; color: #7c3aed;">EDGE COMPUTING GATEWAY</div>
+              <div style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 2px 0 6px;">Raspberry Pi 5 + Active Cooler</div>
+              <div style="font-size: 13px; color: #475569;">รันบริการ Python, Docker MongoDB, Mosquitto MQTT และ SSH</div>
+            </div>
+          </div>
+
+          <div class="cover-hw-card">
+            <img src="slides_assets/hw_esp32_relay.jpg" alt="ESP32 4CH Relay Board" />
+            <div class="cover-hw-label">ESP32 + 4-CH Relay Board</div>
+            <div style="font-size: 12px; color: #64748b;">ควบคุมอุปกรณ์ฟาร์ม &amp; ส่งค่าเซนเซอร์</div>
+          </div>
+
+          <div class="cover-hw-card">
+            <img src="slides_assets/hw_lora_sx1278.jpg" alt="LoRa SX1278 433MHz Module" />
+            <div class="cover-hw-label">LoRa SX1278 (433MHz Ra-01)</div>
+            <div style="font-size: 12px; color: #64748b;">สื่อสารไร้สายระยะไกลพลังงานต่ำ</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm AIoT Platform — มหาวิทยาลัยราชภัฏจันทรเกษม (Chandrakasem Rajabhat University)</span>
+        <span class="slide-num">Slide 1 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 2: PROBLEM & SOLUTIONS ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">PROBLEM STATEMENT &amp; OBJECTIVES</div>
+          <div class="slide-title">ปัญหาของฟาร์มทั่วไป และแนวทางแก้ไขด้วย AIoT</div>
+        </div>
+        <span class="slide-tag">Why CRU Smart Farm?</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card card-red">
+            <div class="card-title" style="color: #991b1b;">❌ ปัญหาของระบบฟาร์มแบบเดิม (Pain Points)</div>
+            <ul class="clean-list">
+              <li><b>1. อับสัญญาณ Wi-Fi ในแปลงเกษตร:</b> พื้นที่เพาะปลูกกว้างทำให้โหนดเซนเซอร์ส่งข้อมูลไม่ได้</li>
+              <li><b>2. เน็ตล่ม = ข้อมูลสูญหาย:</b> ระบบที่ยิงขึ้น Cloud โดยตรง เมื่อเน็ตหลุดข้อมูลจะหายทันที</li>
+              <li><b>3. เปลี่ยนรหัส Wi-Fi ยุ่งยาก:</b> ต้องยกโน้ตบุ๊กไปเสียบสายแก้โค้ดใหม่ทุกครั้งที่ย้ายจุด</li>
+              <li><b>4. ขาดการแจ้งเตือนและควบคุมทันที:</b> เมื่ออุณหภูมิหรือค่า pH ผิดปกติ เกษตรกรแก้ไขไม่ทัน</li>
+            </ul>
+          </div>
+
+          <div class="card card-green">
+            <div class="card-title" style="color: #065f46;">✅ โซลูชันที่เราพัฒนา (Our Solutions)</div>
+            <ul class="clean-list">
+              <li><b>1. LoRa 433MHz + Mosquitto MQTT:</b> ส่งข้อมูลระยะไกลไม่ต้องพึ่ง Wi-Fi และสั่งงานรีเลย์ความเร็วสูง</li>
+              <li><b>2. Offline-First บน Raspberry Pi 5:</b> พักข้อมูลลง <b>MongoDB</b> ในเครื่องก่อนเสมอ เน็ตมาค่อยซิงค์ย้อนหลัง</li>
+              <li><b>3. ตั้งค่า Wi-Fi ผ่านมือถือ (WiFiManager):</b> กดปุ่ม BOOT ค้าง 3 วินาทีเพื่อปล่อย AP ตั้งค่าผ่านมือถือได้ทันที</li>
+              <li><b>4. Auto Control &amp; LINE Bot:</b> สั่งเปิดพัดลม/ปั๊มน้ำอัตโนมัติ พร้อมแจ้งเตือนเข้า <b>LINE OA</b> ทันที</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card card-blue" style="text-align: center; padding: 16px;">
+            <div style="font-size: 16px; font-weight: 800; color: #0369a1;">🎯 เป้าหมายที่ 1: ฮาร์ดแวร์ทนทาน</div>
+            <p style="font-size: 14px; margin-top: 4px;">รับ-ส่งข้อมูล 12 เซนเซอร์ผ่าน LoRa &amp; MQTT พร้อมระบบอัปเดตเฟิร์มแวร์ OTA</p>
+          </div>
+          <div class="card card-purple" style="text-align: center; padding: 16px;">
+            <div style="font-size: 16px; font-weight: 800; color: #6d28d9;">🎯 เป้าหมายที่ 2: Edge Gateway</div>
+            <p style="font-size: 14px; margin-top: 4px;">จัดการผ่าน SSH รันบริการอัตโนมัติ (Systemd) และบีบอัดข้อมูลเก่าลง USB</p>
+          </div>
+          <div class="card card-amber" style="text-align: center; padding: 16px;">
+            <div style="font-size: 16px; font-weight: 800; color: #b45309;">🎯 เป้าหมายที่ 3: Web GIS &amp; LINE</div>
+            <p style="font-size: 14px; margin-top: 4px;">แดชบอร์ดเรียลไทม์ แผนที่ดาวเทียม 4 พิกัด ควบคุมอุปกรณ์ และแจ้งเตือน LINE</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — ที่มาของปัญหาและวัตถุประสงค์</span>
+        <span class="slide-num">Slide 2 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 3: 5-TIER ARCHITECTURE ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">SYSTEM ARCHITECTURE</div>
+          <div class="slide-title">สถาปัตยกรรมระบบ 5 ชั้น (5-Tier AIoT Architecture)</div>
+        </div>
+        <span class="slide-tag">End-to-End Pipeline</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="arch-flow">
+          <div class="arch-box" style="border-color: #10b981; background: #ecfdf5;">
+            <div>
+              <div class="arch-step">1. FIELD NODE</div>
+              <div class="arch-title">ESP32 Sender / MQTT</div>
+              <p style="font-size: 13.5px; color: #334155;">อ่านค่าเซนเซอร์ 12 ชนิด แปลงเป็น JSON ส่งผ่านคลื่น <b>LoRa 433MHz</b> และ <b>MQTT</b></p>
+            </div>
+            <div class="pill-row">
+              <span class="pill pill-green">LoRa.h</span>
+              <span class="pill pill-green">PubSubClient.h</span>
+            </div>
+          </div>
+
+          <div class="arch-box" style="border-color: #0284c7; background: #f0f9ff;">
+            <div>
+              <div class="arch-step" style="color: #0284c7;">2. RADIO BRIDGE</div>
+              <div class="arch-title">ESP32 Receiver</div>
+              <p style="font-size: 13.5px; color: #334155;">รับคลื่น LoRa คำนวณค่าความแรง <code>RSSI</code> / <code>SNR</code> แล้วส่งออกทางสาย USB Serial</p>
+            </div>
+            <div class="pill-row">
+              <span class="pill pill-blue">WiFiManager.h</span>
+              <span class="pill pill-blue">UART 115200</span>
+            </div>
+          </div>
+
+          <div class="arch-box" style="border-color: #7c3aed; background: #f5f3ff;">
+            <div>
+              <div class="arch-step" style="color: #7c3aed;">3. EDGE GATEWAY</div>
+              <div class="arch-title">Raspberry Pi 5</div>
+              <p style="font-size: 13.5px; color: #334155;">รัน <b>Mosquitto Broker</b> + สคริปต์ Python พักข้อมูลลง <b>MongoDB</b> และซิงค์ทุก 10s</p>
+            </div>
+            <div class="pill-row">
+              <span class="pill pill-purple">Mosquitto</span>
+              <span class="pill pill-purple">Docker Mongo</span>
+              <span class="pill">SSH</span>
+            </div>
+          </div>
+
+          <div class="arch-box" style="border-color: #d97706; background: #fffbeb;">
+            <div>
+              <div class="arch-step" style="color: #d97706;">4. BACKEND API</div>
+              <div class="arch-title">PHP 8 + SQLite</div>
+              <p style="font-size: 13.5px; color: #334155;">บันทึกข้อมูลลง 5 ตาราง ประมวลผลกฎ Auto Control และยิง Webhook แจ้งเตือน</p>
+            </div>
+            <div class="pill-row">
+              <span class="pill pill-amber">PDO SQLite</span>
+              <span class="pill pill-amber">cURL API</span>
+            </div>
+          </div>
+
+          <div class="arch-box" style="border-color: #0f172a; background: #f8fafc;">
+            <div>
+              <div class="arch-step" style="color: #0f172a;">5. CLIENT &amp; BOT</div>
+              <div class="arch-title">React GIS &amp; LINE</div>
+              <p style="font-size: 13.5px; color: #334155;">เว็บแดชบอร์ด แผนที่ดาวเทียม GIS ควบคุมอุปกรณ์ และแจ้งเตือนผ่าน LINE OA</p>
+            </div>
+            <div class="pill-row">
+              <span class="pill">Leaflet GIS</span>
+              <span class="pill">DuckDNS</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-blue" style="padding: 16px 22px;">
+          <div class="card-title" style="margin-bottom: 6px;">🔄 สรุปช่องทางการสื่อสารหลักในระบบ (Communication Protocols)</div>
+          <div class="grid-3">
+            <p><b>• คลื่นวิทยุ LoRa 433MHz &amp; SPI:</b> เชื่อมต่อระหว่างบอร์ด ESP32 กับชิป SX1278 ส่งข้อมูลทุก 5 วินาที</p>
+            <p><b>• MQTT (Port 1883) &amp; USB Serial:</b> เชื่อมต่อโหนดอุปกรณ์และส่งข้อมูลเข้าสู่เครื่อง Raspberry Pi 5</p>
+            <p><b>• HTTP REST API &amp; SSH (Port 22):</b> ซิงค์ข้อมูลผ่าน mDNS (<code>.local</code>) และรีโมตจัดการเกตเวย์ผ่าน SSH</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — สถาปัตยกรรมระบบ 5 ชั้น</span>
+        <span class="slide-num">Slide 3 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 4: COMPLETE LIBRARIES & TOOLS MATRIX ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">TECH STACK &amp; LIBRARIES MATRIX</div>
+          <div class="slide-title">สรุปไลบรารี (#include / Packages) และเครื่องมือที่ใช้ครบทุกส่วน</div>
+        </div>
+        <span class="slide-tag">Grading Rubric Reference</span>
+      </div>
+
+      <div class="slide-body">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th style="width: 19%;">ส่วนของระบบ</th>
+              <th style="width: 21%;">สภาพแวดล้อมหลัก</th>
+              <th style="width: 34%;">ไลบรารีและเครื่องมือที่ใช้จริง (Libraries &amp; Tools)</th>
+              <th style="width: 26%;">หน้าที่หลักในโปรเจกต์</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>1. ESP32 Firmware</b><br><span style="font-size:12px; color:#64748b;">(LoRa &amp; MQTT Nodes)</span></td>
+              <td>C / C++<br>Arduino IDE 2.x</td>
+              <td>
+                <code>&lt;SPI.h&gt;</code> <code>&lt;LoRa.h&gt;</code> <code>&lt;ArduinoJson.h&gt;</code><br>
+                <code>&lt;WiFi.h&gt;</code> <code>&lt;WiFiManager.h&gt;</code> <code>&lt;PubSubClient.h&gt;</code><br>
+                <code>&lt;ESPmDNS.h&gt;</code> <code>&lt;HTTPClient.h&gt;</code> <code>&lt;HTTPUpdate.h&gt;</code> <code>&lt;time.h&gt;</code>
+              </td>
+              <td>ส่งข้อมูลผ่าน LoRa 433MHz และ MQTT, เปิด AP ตั้งค่า Wi-Fi, ค้นหาชื่อ <code>raspberrypi.local</code> และอัปเดต OTA</td>
+            </tr>
+            <tr>
+              <td><b>2. Edge Gateway</b><br><span style="font-size:12px; color:#64748b;">(Raspberry Pi 5)</span></td>
+              <td>Debian Linux · Python 3<br>Docker · Systemd</td>
+              <td>
+                <b>Eclipse Mosquitto</b> (MQTT Broker :1883) · <b>OpenSSH</b><br>
+                <code>pyserial</code> · <code>pymongo</code> · <code>requests</code> · <code>gzip</code> · <code>shutil</code><br>
+                <b>Docker (mongo)</b> · <code>nmcli</code> · <b>Avahi mDNS</b>
+              </td>
+              <td>รีโมตจัดการผ่าน <b>SSH</b>, รัน MQTT Broker, อ่านค่า Serial พักลง MongoDB และบีบอัดข้อมูลเก่าลง USB</td>
+            </tr>
+            <tr>
+              <td><b>3. Backend Server</b><br><span style="font-size:12px; color:#64748b;">(REST API &amp; DB)</span></td>
+              <td>PHP 8.x Server<br>SQLite 3 Database</td>
+              <td>
+                <code>PDO (pdo_sqlite / pdo_mysql)</code><br>
+                <code>cURL</code> · <code>OpenSSL</code> · <code>JSON</code>
+              </td>
+              <td>รับซิงค์ข้อมูล, ประมวลผลกฎ Auto Control 4 อุปกรณ์ และยิง HTTPS แจ้งเตือนเข้า LINE API</td>
+            </tr>
+            <tr>
+              <td><b>4. Frontend &amp; GIS</b><br><span style="font-size:12px; color:#64748b;">(Web Dashboard)</span></td>
+              <td>React 18 · TypeScript<br>Vite 8 Proxy Server</td>
+              <td>
+                <code>react</code> · <code>vite</code> (Reverse Proxy <code>/api</code>)<br>
+                <code>leaflet</code> (Esri Satellite GIS) · <code>lucide-react</code>
+              </td>
+              <td>แสดงผลแดชบอร์ดเรียลไทม์, แผนที่ดาวเทียม 4 พิกัด, แยก 3 โซนแปลงเกษตร และกราฟ SVG ย้อนหลัง</td>
+            </tr>
+            <tr>
+              <td><b>5. DevOps &amp; Cloud</b><br><span style="font-size:12px; color:#64748b;">(Network &amp; Bot)</span></td>
+              <td>Git · Dynamic DNS<br>Messaging API</td>
+              <td>
+                <b>Git &amp; GitHub</b> (<code>OLM22/smart-farm</code>) · <b>DuckDNS</b><br>
+                <b>LINE Messaging API</b> · <b>ME-QR</b> · <b>SSH Tunnel</b>
+              </td>
+              <td>เก็บโค้ดบน GitHub, อัปเดตโดเมน <code>olmy.duckdns.org</code>, สร้าง QR Code และส่งแจ้งเตือนเข้า LINE OA</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — ตารางสรุปไลบรารีและเครื่องมือทั้งหมด</span>
+        <span class="slide-num">Slide 4 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 5: HARDWARE COMPONENTS SHOWCASE (NEW!) ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">HARDWARE COMPONENTS</div>
+          <div class="slide-title">อุปกรณ์ฮาร์ดแวร์หลักที่ใช้ในระบบ (Core Hardware Modules)</div>
+        </div>
+        <span class="slide-tag">ESP32 Relay · LoRa SX1278 · Raspberry Pi 5</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-3" style="align-items: stretch;">
+          <!-- Hardware 1 -->
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; background: #ffffff; border: 2px solid #a7f3d0;">
+            <div>
+              <div class="img-frame" style="height: 230px; border: none; box-shadow: none; margin-bottom: 12px;">
+                <img src="slides_assets/hw_esp32_relay.jpg" alt="ESP32 4-Channel Relay Board" />
+              </div>
+              <div class="card-title" style="color: #065f46;">1. บอร์ด ESP32 + รีเลย์ 4 ช่อง</div>
+              <ul class="clean-list">
+                <li>ชิปประมวลผล <b>ESP32-WROOM-32</b> (Wi-Fi + Bluetooth)</li>
+                <li>รีเลย์ <b>Songle SRD-05VDC 10A</b> จำนวน 4 ช่อง (<code>GPIO 26, 27, 14, 12</code>)</li>
+                <li>รองรับไฟเลี้ยง DC 7–30V เหมาะสำหรับงานเกษตรอุตสาหกรรม</li>
+              </ul>
+            </div>
+            <div class="pill-row">
+              <span class="pill pill-green">ESP32-WROOM-32</span>
+              <span class="pill">4x 10A Relay</span>
+            </div>
+          </div>
+
+          <!-- Hardware 2 -->
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; background: #ffffff; border: 2px solid #bae6fd;">
+            <div>
+              <div class="img-frame" style="height: 230px; border: none; box-shadow: none; margin-bottom: 12px;">
+                <img src="slides_assets/hw_lora_sx1278.jpg" alt="LoRa SX1278 433MHz Module" />
+              </div>
+              <div class="card-title" style="color: #075985;">2. โมดูล LoRa SX1278 (433MHz)</div>
+              <ul class="clean-list">
+                <li>บอร์ดโมดูล <b>Ra-01 v4.0</b> ชิปเซ็ต Semtech SX1278 ความถี่ <b>433 MHz</b></li>
+                <li>มาพร้อมเสาอากาศคอยล์ทองแดง (Helical Antenna) ส่งไกลหลายกิโลเมตร</li>
+                <li>เชื่อมต่อกับบอร์ด ESP32 ผ่านบัสความเร็วสูง <b>SPI</b> (แรงดัน 3.3V)</li>
+              </ul>
+            </div>
+            <div class="pill-row">
+              <span class="pill pill-blue">SX1278 433MHz</span>
+              <span class="pill">SPI Interface</span>
+            </div>
+          </div>
+
+          <!-- Hardware 3 -->
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; background: #ffffff; border: 2px solid #ddd6fe;">
+            <div>
+              <div class="img-frame" style="height: 230px; border: none; box-shadow: none; margin-bottom: 12px;">
+                <img src="slides_assets/hw_rpi5.jpg" alt="Raspberry Pi 5 with Active Cooler" />
+              </div>
+              <div class="card-title" style="color: #5b21b6;">3. เกตเวย์ Raspberry Pi 5</div>
+              <ul class="clean-list">
+                <li>ติดตั้งชุดซิงค์และพัดลมระบายความร้อน <b>Active Cooler</b> สำหรับเปิดรัน 24 ชม.</li>
+                <li>รับข้อมูลผ่านพอร์ต USB Serial (<code>/dev/ttyUSB0</code>) และ Wi-Fi Dual-Band</li>
+                <li>รันบริการ <b>Mosquitto MQTT</b>, <b>Docker MongoDB</b> และจัดการผ่าน <b>SSH</b></li>
+              </ul>
+            </div>
+            <div class="pill-row">
+              <span class="pill pill-purple">Raspberry Pi 5</span>
+              <span class="pill">Active Cooler</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — รายละเอียดอุปกรณ์ฮาร์ดแวร์ทั้ง 3 ส่วน</span>
+        <span class="slide-num">Slide 5 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 6: HARDWARE WIRING & SPI PINOUT ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">HARDWARE &amp; SPI WIRING</div>
+          <div class="slide-title">การต่อวงจรฮาร์ดแวร์ระหว่าง ESP32 และโมดูล LoRa SX1278</div>
+        </div>
+        <span class="slide-tag">VSPI Bus · 3.3V Logic</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2" style="align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="card card-green" style="padding: 16px 20px;">
+              <div class="card-title" style="margin-bottom: 4px;">🔌 การเชื่อมต่อบัส SPI ความเร็วสูง (แรงดัน 3.3V เท่านั้น)</div>
+              <p style="font-size: 14px;">ใช้พอร์ต <b>VSPI</b> มาตรฐานของ ESP32 เชื่อมต่อกับโมดูล <b>LoRa SX1278 (433MHz)</b></p>
+            </div>
+
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>ขาโมดูล LoRa SX1278</th>
+                  <th>ขาบอร์ด ESP32</th>
+                  <th>หน้าที่การทำงาน</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><b>VCC / GND</b></td><td><code>3V3</code> / <code>GND</code></td><td>ไฟเลี้ยงวงจร 3.3V และกราวด์ร่วม</td></tr>
+                <tr><td><b>SCK</b></td><td><code>GPIO 18</code></td><td>สัญญาณนาฬิกา SPI Clock</td></tr>
+                <tr><td><b>MISO</b></td><td><code>GPIO 19</code></td><td>รับข้อมูลจากโมดูล LoRa เข้า ESP32</td></tr>
+                <tr><td><b>MOSI</b></td><td><code>GPIO 23</code></td><td>ส่งข้อมูลจาก ESP32 เข้าโมดูล LoRa</td></tr>
+                <tr><td><b>NSS (CS)</b></td><td><code>GPIO 5</code></td><td>ขาเลือกชิป (Chip Select)</td></tr>
+                <tr><td><b>RST</b></td><td><code>GPIO 14</code></td><td>ขารีเซ็ตฮาร์ดแวร์ชิปวิทยุ</td></tr>
+                <tr><td><b>DIO0</b></td><td><code>GPIO 26</code></td><td>ขาแจ้งเตือนเมื่อรับ-ส่งแพ็กเกจเสร็จ</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793574349349_7db8a06c.png" alt="ESP32 LoRa Pinout Table" />
+            <div class="img-caption">ตารางการต่อสายสัญญาณ SPI ระหว่าง ESP32 และโมดูล LoRa SX1278</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — การออกแบบวงจรและการเชื่อมต่อพินฮาร์ดแวร์</span>
+        <span class="slide-num">Slide 6 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 7: ESP32 SENDER & MQTT NODE FIRMWARE ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">FIRMWARE DEEP DIVE (PART 1)</div>
+          <div class="slide-title">โค้ดฝั่งส่งข้อมูล: LoRa Sender &amp; โหนด MQTT / OTA</div>
+        </div>
+        <span class="slide-tag">Arduino C++ Firmware</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2-wide-right" style="align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="card card-green">
+              <div class="card-title">📦 1. โหนดส่งคลื่นวิทยุ LoRa (esp32_lora_sender.ino)</div>
+              <ul class="clean-list">
+                <li>ใช้ <code>&lt;SPI.h&gt;</code>, <code>&lt;LoRa.h&gt;</code>, <code>&lt;ArduinoJson.h&gt;</code></li>
+                <li>ตั้งค่าความถี่ <code>433E6</code>, <code>SF7</code>, <code>SyncWord 0xF3</code></li>
+                <li>บรรจุข้อมูลเซนเซอร์ 12 ค่าลง JSON ส่งออกทุก <b>5 วินาที</b></li>
+              </ul>
+            </div>
+
+            <div class="card card-blue">
+              <div class="card-title">📡 2. โหนด MQTT &amp; OTA (SmartFarmESP32NodeTEST.ino)</div>
+              <ul class="clean-list">
+                <li>ใช้ <code>&lt;PubSubClient.h&gt;</code> เชื่อมต่อ <b>Mosquitto Broker</b> (พอร์ต 1883)</li>
+                <li>ใช้ <code>&lt;ESPmDNS.h&gt;</code> ค้นหา IP ของ <code>raspberrypi.local</code> อัตโนมัติ</li>
+                <li>ใช้ <code>&lt;HTTPUpdate.h&gt;</code> อัปเดตเฟิร์มแวร์ไร้สาย (OTA) และสั่งงานรีเลย์ 4 ช่อง</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="code-block"><span class="cm">// ไลบรารีหลักในเฟิร์มแวร์ ESP32 (LoRa + MQTT + OTA)</span>
+<span class="kw">#include</span> <span class="str">&lt;SPI.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;LoRa.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;ArduinoJson.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;PubSubClient.h&gt;</span>  <span class="cm">// เชื่อมต่อ Mosquitto MQTT Broker</span>
+<span class="kw">#include</span> <span class="str">&lt;ESPmDNS.h&gt;</span>       <span class="cm">// ค้นหา raspberrypi.local อัตโนมัติ</span>
+<span class="kw">#include</span> <span class="str">&lt;HTTPUpdate.h&gt;</span>    <span class="cm">// อัปเดตเฟิร์มแวร์ผ่าน Wi-Fi (OTA)</span>
+
+<span class="kw">typedef struct</span> {
+  <span class="kw">float</span> air_temp, air_rh, soil_temp, soil_rh;
+  <span class="kw">float</span> water_temp, light_lux, light_par;
+  <span class="kw">float</span> soil_ph, water_ph, water_ec, fert_ec, flow_rate;
+} FarmSensorData;
+
+<span class="kw">void</span> sendLoRaPacket(<span class="kw">const</span> FarmSensorData &amp;d) {
+  StaticJsonDocument&lt;<span class="num">512</span>&gt; doc;
+  doc[<span class="str">"node_id"</span>]  = <span class="str">"ESP32_NODE_01"</span>;
+  doc[<span class="str">"s_temp_s"</span>] = d.air_temp;
+  doc[<span class="str">"w_ph"</span>]     = d.water_ph;
+  <span class="cm">// ... บรรจุครบ 12 พารามิเตอร์ ...</span>
+  String payload;
+  serializeJson(doc, payload);
+  LoRa.beginPacket();
+  LoRa.print(payload);
+  LoRa.endPacket();
+}</div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — โครงสร้างโค้ดฝั่งส่งข้อมูล LoRa และโหนด MQTT</span>
+        <span class="slide-num">Slide 7 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 8: ESP32 RECEIVER & WIFIMANAGER ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">FIRMWARE DEEP DIVE (PART 2)</div>
+          <div class="slide-title">โค้ดฝั่งรับข้อมูล: ESP32 Receiver &amp; ตั้งค่า Wi-Fi ผ่านมือถือ</div>
+        </div>
+        <span class="slide-tag">WiFiManager Captive Portal</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-3" style="align-items: stretch;">
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div class="card-title">📱 ฟีเจอร์เด่นของบอร์ด Receiver</div>
+              <ul class="clean-list">
+                <li><b>ไลบรารี <code>WiFiManager.h</code>:</b> ปล่อย Wi-Fi AP ชื่อ <code>SmartFarm_Rx_xxxxxx</code> ให้มือถือเกาะตั้งค่าที่ <code>192.168.4.1</code></li>
+                <li><b>กดปุ่ม BOOT ค้าง 3 วินาที:</b> เปิดโหมดตั้งค่า Wi-Fi ใหม่ได้ตลอดเวลาโดยไม่ต้องอัปโหลดโค้ดใหม่</li>
+                <li><b>วัดคุณภาพสัญญาณ:</b> อ่านค่า <code>RSSI</code> และ <code>SNR</code> แนบเข้า JSON ส่งต่อทาง USB Serial</li>
+                <li><b>แก้ไฟ LED ค้าง:</b> ใช้ <code>#define LED_ON LOW</code> รองรับบอร์ด Active-Low</li>
+              </ul>
+            </div>
+            <div class="pill-row">
+              <span class="pill pill-blue">WiFiManager.h</span>
+              <span class="pill pill-green">BOOT 3 วินาที</span>
+            </div>
+          </div>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793577542557_518741eb.jpg" alt="LoRa Receiver Ready Serial Monitor" />
+            <div class="img-caption">Serial Monitor ยืนยันชิป LoRa 433MHz พร้อมทำงาน</div>
+          </div>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793588975911_44d3c294.jpg" alt="Mobile WiFi Scan SmartFarm_Rx" style="max-height: 400px;" />
+            <div class="img-caption">มือถือสแกนพบ Wi-Fi "SmartFarm_Rx_e5f57630" เมื่อกดปุ่ม BOOT 3 วินาที</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — เฟิร์มแวร์ฝั่งรับข้อมูลและระบบตั้งค่า Wi-Fi ผ่านมือถือ</span>
+        <span class="slide-num">Slide 8 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 9: 12 SENSOR PARAMETERS & LIVE SERIAL ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">TELEMETRY PAYLOAD</div>
+          <div class="slide-title">พารามิเตอร์เซนเซอร์ทั้ง 12 ชนิด และผลการรับส่งจริง</div>
+        </div>
+        <span class="slide-tag">12 Sensor Metrics</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2" style="align-items: center;">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>หมวดหมู่</th>
+                <th>คีย์ JSON</th>
+                <th>พารามิเตอร์ที่ตรวจวัด</th>
+                <th>หน่วย</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td rowspan="2"><b>1. อากาศ</b></td><td><code>s_temp_s</code></td><td>อุณหภูมิอากาศ (Air Temp)</td><td>°C</td></tr>
+              <tr><td><code>s_rh_s</code></td><td>ความชื้นสัมพัทธ์อากาศ (Air RH)</td><td>%RH</td></tr>
+              <tr><td rowspan="3"><b>2. ดิน</b></td><td><code>soil_t</code></td><td>อุณหภูมิดิน (Soil Temp)</td><td>°C</td></tr>
+              <tr><td><code>soil_rh</code></td><td>ความชื้นในดิน (Soil Moisture)</td><td>%</td></tr>
+              <tr><td><code>s_ph</code></td><td>ค่ากรด-ด่างในดิน (Soil pH)</td><td>pH</td></tr>
+              <tr><td rowspan="4"><b>3. น้ำและปุ๋ย</b></td><td><code>w_temp</code></td><td>อุณหภูมิน้ำ (Water Temp)</td><td>°C</td></tr>
+              <tr><td><code>w_ph</code></td><td>ค่ากรด-ด่างของน้ำ (Water pH)</td><td>pH</td></tr>
+              <tr><td><code>w_ec</code> / <code>f_ec</code></td><td>ค่าการนำไฟฟ้าน้ำ / ปุ๋ย (EC)</td><td>mS/cm</td></tr>
+              <tr><td><code>flow</code></td><td>อัตราการไหลของน้ำ (Flow Rate)</td><td>L/min</td></tr>
+              <tr><td rowspan="2"><b>4. แสง</b></td><td><code>lux</code></td><td>ความเข้มแสงสว่าง (Light Lux)</td><td>Lux</td></tr>
+              <tr><td><code>par</code></td><td>แสงสังเคราะห์แสงของพืช (PAR)</td><td>µmol/m²/s</td></tr>
+            </tbody>
+          </table>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793580711504_c93f09ea.png" alt="Live JSON Telemetry on Serial Monitor" />
+            <div class="img-caption">รับแพ็กเกจ JSON จริงจาก ESP32_NODE_01 (ความแรงสัญญาณ RSSI -45 dBm, SNR 10.25 dB)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — ข้อมูลเซนเซอร์ 12 พารามิเตอร์ และผลทดสอบบน Serial Monitor</span>
+        <span class="slide-num">Slide 9 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 10: RASPBERRY PI 5 EDGE GATEWAY, SSH & MOSQUITTO ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">EDGE GATEWAY ARCHITECTURE</div>
+          <div class="slide-title">Raspberry Pi 5 Edge Gateway: SSH, Mosquitto MQTT &amp; Python Service</div>
+        </div>
+        <span class="slide-tag">SSH · Mosquitto · Docker Mongo</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2" style="align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="card card-purple">
+              <div class="card-title">🍓 บริการหลักที่รันบน Raspberry Pi 5 (Headless Server)</div>
+              <ul class="clean-list">
+                <li><b>OpenSSH (รีโมตไร้หน้าจอ):</b> ควบคุมและตั้งค่าเครื่องผ่านคำสั่ง <code>ssh olmypi@raspberrypi.local</code></li>
+                <li><b>Eclipse Mosquitto (MQTT Broker):</b> ตัวกลางรับ-ส่งข้อความ MQTT ที่พอร์ต <code>1883</code> ภายในวงแลน</li>
+                <li><b>Docker MongoDB:</b> ฐานข้อมูล NoSQL ท้องถิ่น (<code>--restart always</code>) สำหรับพักข้อมูลเซนเซอร์</li>
+                <li><b>Systemd Auto-Start:</b> บริการ <code>smartfarm-gateway.service</code> รันอัตโนมัติทันทีที่เสียบปลั๊กไฟ</li>
+              </ul>
+            </div>
+
+            <div class="card card-green">
+              <div class="card-title">🐍 โมดูล Python ทั้ง 5 ไฟล์บนเกตเวย์</div>
+              <p style="font-size: 14.5px;">
+                <code>main.py</code> (ตัวควบคุมหลัก) · <code>serial_reader.py</code> (อ่าน USB Serial ด้วย <code>pyserial</code>) · <code>mongo_handler.py</code> (บันทึก MongoDB ด้วย <code>pymongo</code>) · <code>sync_client.py</code> (ส่ง HTTP POST ด้วย <code>requests</code>) · <code>storage_manager.py</code> (บีบอัดไฟล์ <code>gzip</code>)
+              </p>
+            </div>
+          </div>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793580981677_acff82e8.jpg" alt="Raspberry Pi 5 SSH Terminal Running Gateway" />
+            <div class="img-caption">การรีโมตผ่าน SSH (olmypi@raspberrypi) เพื่อตรวจสอบการทำงานของบริการ Gateway และ MongoDB Sync</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — การจัดการ Raspberry Pi 5 ผ่าน SSH, Mosquitto MQTT และบริการ Python</span>
+        <span class="slide-num">Slide 10 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 11: OFFLINE-FIRST & USB ARCHIVE ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">OFFLINE-FIRST &amp; AUTO ARCHIVING</div>
+          <div class="slide-title">กลไกป้องกันข้อมูลสูญหายเมื่อเน็ตล่ม และการบีบอัดข้อมูลลง USB</div>
+        </div>
+        <span class="slide-tag">Zero Data Loss Pipeline</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card card-blue">
+            <div class="card-title">1️⃣ ขณะออนไลน์ (Online Sync)</div>
+            <ul class="clean-list">
+              <li>บันทึกข้อมูลลง <b>MongoDB</b> ทันทีพร้อมติดป้าย <code>synced: false</code></li>
+              <li>ดึงข้อมูลส่งขึ้นเซิร์ฟเวอร์ครั้งละ <b>50 รายการ ทุกๆ 10 วินาที</b></li>
+              <li>เมื่อเซิร์ฟเวอร์ตอบกลับ <code>200 OK</code> จึงเปลี่ยนเป็น <code>synced: true</code></li>
+            </ul>
+          </div>
+
+          <div class="card card-amber">
+            <div class="card-title">2️⃣ เมื่ออินเทอร์เน็ตล่ม (Offline)</div>
+            <ul class="clean-list">
+              <li>ข้อมูลจากแปลงเกษตรยังถูกเก็บลง <b>MongoDB ใน Raspberry Pi</b> ต่อเนื่องทุก 5 วินาที</li>
+              <li><b>ข้อมูลไม่สูญหาย 100%</b> แม้เราเตอร์ดับหรือเซิร์ฟเวอร์ปิด</li>
+              <li>เมื่อเน็ตกลับมา ระบบจะทยอยส่งข้อมูลค้างทั้งหมดขึ้นเซิร์ฟเวอร์อัตโนมัติ</li>
+            </ul>
+          </div>
+
+          <div class="card card-purple">
+            <div class="card-title">3️⃣ บีบอัดลง USB (Auto Archive)</div>
+            <ul class="clean-list">
+              <li>ใช้ไลบรารี <code>shutil</code> เช็คพื้นที่ SD Card ทุก 1 ชั่วโมง</li>
+              <li>หากเมมโมรี่การ์ดใช้พื้นที่เกิน <b>75%</b> จะคัดกรองข้อมูลที่ซิงค์แล้วและเก่าเกิน <b>7 วัน</b></li>
+              <li>บีบอัดด้วย <code>gzip</code> เป็นไฟล์ <code>.json.gz</code> ย้ายลงแฟลชไดรฟ์ <code>/media/usb</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="code-block"><span class="cm"># ลอจิกการทำงานแบบ Offline-First ใน raspberry_pi_gateway/main.py</span>
+<span class="kw">def</span> on_serial_data(raw_json):
+    mongo.insert_sensor_data(raw_json)             <span class="cm"># 1. เก็บลง MongoDB ทันที (synced = False)</span>
+
+<span class="kw">def</span> sync_loop_every_10s():
+    batch = mongo.get_unsynced_records(limit=<span class="num">50</span>)   <span class="cm"># 2. ดึงรายการค้างส่งทีละ 50 รายการ</span>
+    <span class="kw">if</span> sync_client.send_batch(batch):              <span class="cm"># 3. ส่ง HTTP POST ไปยัง /api/sync.php</span>
+        mongo.mark_as_synced([d[<span class="str">"_id"</span>] <span class="kw">for</span> d <span class="kw">in</span> batch])</div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — ระบบสำรองข้อมูล Offline-First และการจัดการพื้นที่จัดเก็บอัตโนมัติ</span>
+        <span class="slide-num">Slide 11 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 12: DATABASE SCHEMA ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">DATABASE DESIGN</div>
+          <div class="slide-title">โครงสร้างฐานข้อมูล: MongoDB (Edge) และ SQLite 5 ตาราง (Server)</div>
+        </div>
+        <span class="slide-tag">NoSQL + Relational Schema</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2-wide-right" style="align-items: center;">
+          <div class="card card-purple">
+            <div class="card-title">🍃 1. MongoDB บน Raspberry Pi</div>
+            <p style="font-size: 14px; margin-bottom: 10px;">คอลเลกชัน <code>smart_farm.sensor_logs</code> เก็บ JSON Document ความเร็วสูง:</p>
+            <div class="code-block" style="font-size: 12px;">{
+  <span class="str">"_id"</span>: ObjectId(<span class="str">"6725a9f..."</span>),
+  <span class="str">"node_id"</span>: <span class="str">"ESP32_NODE_01"</span>,
+  <span class="str">"s_temp_s"</span>: <span class="num">28.4</span>, <span class="str">"s_rh_s"</span>: <span class="num">65.2</span>,
+  <span class="str">"soil_t"</span>: <span class="num">25.1</span>,   <span class="str">"soil_rh"</span>: <span class="num">54.0</span>,
+  <span class="str">"w_ph"</span>: <span class="num">6.8</span>,      <span class="str">"w_ec"</span>: <span class="num">1.45</span>,
+  <span class="str">"rssi"</span>: <span class="num">-45</span>,      <span class="str">"snr"</span>: <span class="num">10.25</span>,
+  <span class="str">"synced"</span>: <span class="kw">true</span>
+}</div>
+          </div>
+
+          <div class="card card-amber">
+            <div class="card-title">🗄️ 2. SQLite 3 บนเซิร์ฟเวอร์หลัก (ครบทั้ง 5 ตาราง)</div>
+            <table class="clean-table" style="margin-top: 8px;">
+              <thead>
+                <tr>
+                  <th>ชื่อตาราง (Table)</th>
+                  <th>หน้าที่หลัก</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>farm_sensor_logs</code></td>
+                  <td>เก็บข้อมูลเซนเซอร์ 12 ค่า + <code>mongo_id (UNIQUE)</code> ป้องกันข้อมูลซ้ำ</td>
+                </tr>
+                <tr>
+                  <td><code>farm_alert_rules</code></td>
+                  <td>เก็บเงื่อนไขแจ้งเตือนที่ผู้ใช้ตั้งค่า เช่น <code>w_ph &gt; 7.8</code> (DANGER)</td>
+                </tr>
+                <tr>
+                  <td><code>farm_alert_logs</code></td>
+                  <td>เก็บประวัติการแจ้งเตือนทั้งหมดและใช้คำนวณเวลา Cooldown</td>
+                </tr>
+                <tr>
+                  <td><code>farm_device_controls</code></td>
+                  <td>เก็บสถานะอุปกรณ์ทั้ง 4 ตัว โหมด Auto/Manual และค่าเกณฑ์เปิด-ปิด</td>
+                </tr>
+                <tr>
+                  <td><code>farm_line_settings</code></td>
+                  <td>เก็บ Channel Access Token ของ LINE OA และสถานะการเปิดใช้งาน</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — การออกแบบฐานข้อมูล NoSQL และ SQLite ทั้ง 5 ตาราง</span>
+        <span class="slide-num">Slide 12 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 13: SATELLITE GIS MAP & 3 ZONES ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">SATELLITE GIS &amp; MULTI-ZONE MANAGEMENT</div>
+          <div class="slide-title">แผนที่พิกัดฟาร์มดาวเทียม (Live GIS) และการแบ่งโซนแปลงเกษตร</div>
+        </div>
+        <span class="slide-tag">Leaflet.js · Esri World Imagery</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2" style="align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="card card-green">
+              <div class="card-title">🛰️ 1. แผนที่พิกัดฟาร์มดาวเทียม (Farm Locations GIS)</div>
+              <ul class="clean-list">
+                <li>พัฒนาด้วยไลบรารี <b>Leaflet.js</b> เชื่อมต่อภาพถ่ายดาวเทียม <b>Esri World Imagery</b> สลับโหมดได้ 3 เลเยอร์ (<b>Satellite / Street / Terrain</b>)</li>
+                <li>รองรับระบบค้นหาและคลิกบินข้ามพิกัด (<b>Click to Fly-To</b>) 4 จุดหลัก:
+                  <br>• <b>CRU Demo Center (กรุงเทพฯ)</b> &amp; <b>CRU Algae Greenhouse</b>
+                  <br>• <b>CRU Organic Farm (ชลบุรี)</b> &amp; <b>CRU Smart Highlands (เชียงใหม่)</b>
+                </li>
+              </ul>
+            </div>
+
+            <div class="card card-blue">
+              <div class="card-title">🌱 2. ระบบแบ่งโซนแปลงเกษตร 3 โซน (ZonesTab)</div>
+              <ul class="clean-list">
+                <li>แยกดูข้อมูลสภาพแวดล้อมเฉพาะของ <b>โซน A (เมล่อน)</b>, <b>โซน B (ผักสลัด)</b> และ <b>โซน C (เรือนเพาะชำ)</b></li>
+                <li>ใช้ฟังก์ชัน <code>normalizeRecord()</code> แปลงชนิดข้อมูลตัวเลขจาก SQLite ให้แสดงผลทศนิยมได้อย่างแม่นยำไม่เกิดหน้าจอดำ</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793589889530_830ef840.png" alt="Live Satellite GIS Map Screen" />
+            <div class="img-caption">ภาพหน้าจอจริง: ระบบแผนที่พิกัดฟาร์มดาวเทียม (Live GIS) พร้อมรายการพิกัดฟาร์มทั้ง 4 จุด</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — ระบบแผนที่ดาวเทียม GIS และการจัดการโซนแปลงเกษตร</span>
+        <span class="slide-num">Slide 13 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 14: AUTO / MANUAL ACTUATOR CONTROL ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">CLOSED-LOOP AUTOMATION</div>
+          <div class="slide-title">ระบบควบคุมอุปกรณ์อัตโนมัติ (Auto Mode) และสั่งงานเอง (Manual)</div>
+        </div>
+        <span class="slide-tag">4 Actuators · Editable Thresholds</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2" style="align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="card card-green" style="padding: 16px 20px;">
+              <div class="card-title" style="margin-bottom: 4px;">⚙️ ตัดสินใจเปิด-ปิดอัตโนมัติตามค่าเซนเซอร์จริง</div>
+              <p style="font-size: 14.5px;">ประมวลผลทุกครั้งที่มีข้อมูลซิงค์เข้าเซิร์ฟเวอร์ และ<b>คลิกแก้ไขตัวเลขเกณฑ์บนหน้าการ์ดได้ทันที</b>:</p>
+            </div>
+
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>อุปกรณ์</th>
+                  <th>ค่าเซนเซอร์ที่ตรวจ</th>
+                  <th>เงื่อนไขเปิดอัตโนมัติ (Auto)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>1. พัดลมระบายอากาศ</b> (<code>fan_1</code>)</td>
+                  <td>อุณหภูมิอากาศ (<code>s_temp_s</code>)</td>
+                  <td>เปิดเมื่อ <code>&gt; 32.0 °C</code></td>
+                </tr>
+                <tr>
+                  <td><b>2. ปั๊มน้ำหลัก</b> (<code>pump_1</code>)</td>
+                  <td>ความชื้นในดิน (<code>soil_rh</code>)</td>
+                  <td>เปิดเมื่อ <code>&lt; 45.0 %</code></td>
+                </tr>
+                <tr>
+                  <td><b>3. ไฟสังเคราะห์แสง</b> (<code>light_1</code>)</td>
+                  <td>ความเข้มแสง (<code>lux</code>)</td>
+                  <td>เปิดเมื่อ <code>&lt; 3,000 Lux</code></td>
+                </tr>
+                <tr>
+                  <td><b>4. วาล์วน้ำปุ๋ย</b> (<code>valve_1</code>)</td>
+                  <td>ค่า EC น้ำ (<code>w_ec</code>)</td>
+                  <td>เปิดเมื่อ <code>&lt; 1.2 mS/cm</code></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="card" style="padding: 14px 18px;">
+              <p style="font-size: 14px;"><b>🖐️ โหมด MANUAL:</b> กดสลับเพื่อสั่งเปิด/ปิดด้วยตัวเอง พร้อมแสดงสถานะยืนยันกลับ (เช่น <code>FAN_1_OFF</code>)</p>
+            </div>
+          </div>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793586362309_fcd6087d.png" alt="Device Controls UI" />
+            <div class="img-caption">ภาพหน้าจอจริง: แผงควบคุมอุปกรณ์ทั้ง 4 ชุด รองรับโหมด AUTO MODE และ MANUAL</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — ระบบควบคุมอุปกรณ์อัตโนมัติและสั่งงานแบบแมนนวล</span>
+        <span class="slide-num">Slide 14 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 15: REAL-TIME ALERTS & LINE BOT ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">REAL-TIME ALERT ENGINE &amp; LINE BOT</div>
+          <div class="slide-title">ระบบตรวจจับค่าวิกฤตและแจ้งเตือนเข้า LINE Official Account</div>
+        </div>
+        <span class="slide-tag">LINE Messaging API</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-3" style="align-items: stretch;">
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div class="card-title">💬 ขั้นตอนการแจ้งเตือนเข้า LINE</div>
+              <ul class="clean-list">
+                <li><b>1. เชื่อมต่อ LINE Messaging API:</b> ใช้บอท <b>SmartFarm Official Account</b> แทน LINE Notify ที่ยกเลิกไปแล้ว</li>
+                <li><b>2. เทียบเกณฑ์อัตโนมัติ:</b> เมื่อค่าเซนเซอร์เกินเกณฑ์ (เช่น <code>w_ph &gt; 7.8</code>) จะบันทึกลงตารางแจ้งเตือนทันที</li>
+                <li><b>3. กันสแปม (Cooldown):</b> หน่วงเวลาไม่ให้ส่งข้อความซ้ำรัวๆ ในเหตุการณ์เดิม</li>
+                <li><b>4. แนบลิงก์แดชบอร์ด:</b> ส่งข้อความพร้อมลิงก์ <code>http://olmy.duckdns.org:5173</code> ให้กดเปิดดูบนมือถือได้ทันที</li>
+              </ul>
+            </div>
+            <div class="pill-row">
+              <span class="pill pill-green">LINE OA Bot</span>
+              <span class="pill pill-blue">cURL HTTPS</span>
+            </div>
+          </div>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793585207778_f1abfcf4.png" alt="Triggered Alert Logs Web UI" />
+            <div class="img-caption">ประวัติการแจ้งเตือน (Triggered Alert Logs) บนหน้าเว็บแดชบอร์ด</div>
+          </div>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793588982620_5d7a718d.jpg" alt="LINE Official Account Alert on Smartphone" style="max-height: 400px;" />
+            <div class="img-caption">ข้อความแจ้งเตือนจริงจากบอท SmartFarm บนสมาร์ตโฟน</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — ระบบแจ้งเตือนอัจฉริยะผ่าน LINE Official Account</span>
+        <span class="slide-num">Slide 15 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 16: GITHUB, DUCKDNS & ME-QR ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">DEVOPS, VERSION CONTROL &amp; PUBLIC ACCESS</div>
+          <div class="slide-title">การจัดการโค้ดด้วย GitHub และเข้าถึงออนไลน์ผ่าน DuckDNS &amp; ME-QR</div>
+        </div>
+        <span class="slide-tag">GitHub · DuckDNS · ME-QR</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-3" style="align-items: stretch;">
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div class="card-title">🌐 เครื่องมือวิศวกรรมซอฟต์แวร์</div>
+              <ul class="clean-list">
+                <li><b>1. Git &amp; GitHub:</b> จัดเก็บโค้ดทั้งระบบไว้บน <code>github.com/OLM22/smart-farm</code></li>
+                <li><b>2. DuckDNS (Dynamic DNS):</b> ใช้โดเมน <code>olmy.duckdns.org</code> พร้อมสคริปต์อัปเดต IP อัตโนมัติ (<code>update_duckdns.ps1</code>)</li>
+                <li><b>3. ME-QR Generator:</b> สร้าง QR Code ให้สแกนเข้าใช้งานแดชบอร์ดจากมือถือได้ทันที</li>
+                <li><b>4. SSH Tunnel &amp; Firewall Script:</b> มีสคริปต์เปิดพอร์ต Windows Firewall และ <code>Start_Public_Tunnel.bat</code> สำรอง</li>
+              </ul>
+            </div>
+            <div class="pill-row">
+              <span class="pill">OLM22/smart-farm</span>
+              <span class="pill pill-amber">olmy.duckdns.org</span>
+            </div>
+          </div>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793584254609_0fb38773.jpg" alt="DuckDNS Domain Configuration" />
+            <div class="img-caption">การจดโดเมน olmy.duckdns.org บนระบบ DuckDNS</div>
+          </div>
+
+          <div class="img-frame" style="height: 465px;">
+            <img src="slides_assets/media_1793589026324_919b084c.png" alt="ME-QR Generator Interface" />
+            <div class="img-caption">การสร้างคิวอาร์โค้ดเข้าสู่ระบบด้วยแพลตฟอร์ม ME-QR</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — การจัดการเวอร์ชันโค้ดด้วย GitHub และการออนไลน์ระบบด้วย DuckDNS</span>
+        <span class="slide-num">Slide 16 / 17</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 17: SUMMARY & LIVE DEMO QR ==================== -->
+    <section class="slide">
+      <div class="slide-header">
+        <div>
+          <div class="slide-kicker">SUMMARY &amp; LIVE DEMONSTRATION</div>
+          <div class="slide-title">สรุปผลการดำเนินงานและทดสอบระบบจริง (Q&amp;A)</div>
+        </div>
+        <span class="slide-tag">100% Completed</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2-wide-left" style="align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="card card-green">
+              <div class="card-title" style="font-size: 18px;">🏆 สรุปความสำเร็จของระบบ CRU Smart Farm</div>
+              <ul class="clean-list">
+                <li><b>1. สื่อสารไร้สายครบวงจร (LoRa 433MHz + Mosquitto MQTT):</b> รับส่งข้อมูลเซนเซอร์ 12 ค่าทุก 5 วินาที พร้อมตั้งค่า Wi-Fi ผ่านมือถือด้วยการกดปุ่ม BOOT 3 วินาที</li>
+                <li><b>2. เกตเวย์ Raspberry Pi 5 แบบ Offline-First:</b> จัดการผ่าน SSH รันบริการอัตโนมัติ พักข้อมูลลง MongoDB เมื่อเน็ตล่ม และบีบอัดข้อมูลเก่าลง USB</li>
+                <li><b>3. ควบคุมอัตโนมัติ &amp; แจ้งเตือน LINE OA:</b> สั่งเปิด-ปิดอุปกรณ์ 4 ชนิดตามเกณฑ์เซนเซอร์ และส่งข้อความแจ้งเตือนเข้ามือถือทันที</li>
+                <li><b>4. แดชบอร์ดและแผนที่ดาวเทียม GIS:</b> แสดงผลพิกัดฟาร์ม 4 จุด แยก 3 โซนเพาะปลูก เก็บโค้ดบน GitHub และเข้าถึงผ่าน <code>olmy.duckdns.org</code></li>
+              </ul>
+            </div>
+
+            <div class="grid-3">
+              <div class="card card-blue" style="text-align: center; padding: 14px;">
+                <div style="font-size: 12.5px; font-weight: 700; color: #0369a1;">GitHub Repo</div>
+                <div class="mono" style="margin-top: 4px;">OLM22/smart-farm</div>
+              </div>
+              <div class="card card-purple" style="text-align: center; padding: 14px;">
+                <div style="font-size: 12.5px; font-weight: 700; color: #6d28d9;">Public URL</div>
+                <div class="mono" style="margin-top: 4px;">olmy.duckdns.org:5173</div>
+              </div>
+              <div class="card card-amber" style="text-align: center; padding: 14px;">
+                <div style="font-size: 12.5px; font-weight: 700; color: #b45309;">LINE Bot</div>
+                <div class="mono" style="margin-top: 4px;">SmartFarm OA</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="img-frame" style="height: 465px; padding: 20px; background: #ecfdf5; border: 2px solid #10b981;">
+            <img src="slides_assets/media_1793588674689_9f9519af.png" alt="Scan QR Code for Live Demo" style="max-height: 295px;" />
+            <div style="margin-top: 14px; text-align: center;">
+              <div style="font-size: 21px; font-weight: 800; color: #065f46;">THANK YOU · Q&amp;A</div>
+              <div style="font-size: 14.5px; font-weight: 700; color: #047857; margin-top: 4px;">สแกน QR Code เพื่อเปิดใช้งานระบบจริง</div>
+              <div class="mono" style="margin-top: 6px; display: inline-block;">http://olmy.duckdns.org:5173</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>CRU Smart Farm — ขอบคุณคณะกรรมการทุกท่าน</span>
+        <span class="slide-num">Slide 17 / 17</span>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Interactive Image Replacer Script -->
+  <script>
+    document.querySelectorAll('img').forEach((img) => {
+      img.title = 'คลิกเพื่อเปลี่ยนรูปภาพนี้จากเครื่องของคุณ (ถ้าต้องการ)';
+      img.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+        input.click();
+      });
+    });
+  </script>
+</body>
+</html>

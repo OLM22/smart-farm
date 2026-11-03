@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { DeviceControl } from '../types';
-import { Power, Cpu, CheckCircle2, Lightbulb, Wind, Waves, Disc } from 'lucide-react';
+import { api } from '../api';
+import { Power, Cpu, CheckCircle2, Lightbulb, Wind, Waves, Disc, Save } from 'lucide-react';
 
 interface ControlsTabProps {
   devices: DeviceControl[];
@@ -14,6 +15,8 @@ export const ControlsTab: React.FC<ControlsTabProps> = ({
   onToggleAutoMode
 }) => {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [customThresholds, setCustomThresholds] = useState<Record<string, number>>({});
+  const [savedMsgId, setSavedMsgId] = useState<string | null>(null);
 
   const handleStateChange = async (deviceId: string, currentState: 'ON' | 'OFF') => {
     setUpdatingId(deviceId);
@@ -29,11 +32,29 @@ export const ControlsTab: React.FC<ControlsTabProps> = ({
     setUpdatingId(null);
   };
 
+  const handleSaveThreshold = async (dev: DeviceControl) => {
+    const val = customThresholds[dev.device_id] ?? dev.threshold_val ?? 32;
+    setUpdatingId(dev.device_id);
+    await api.updateDeviceControl(dev.device_id, undefined, undefined, val);
+    setUpdatingId(null);
+    setSavedMsgId(dev.device_id);
+    setTimeout(() => setSavedMsgId(null), 2000);
+  };
+
   const getDeviceIcon = (id: string) => {
     if (id.includes('pump')) return <Waves size={24} color="#06b6d4" />;
     if (id.includes('fan')) return <Wind size={24} color="#60a5fa" />;
     if (id.includes('light')) return <Lightbulb size={24} color="#eab308" />;
     return <Disc size={24} color="#10b981" />;
+  };
+
+  const getAutoMeta = (dev: DeviceControl) => {
+    const id = dev.device_id;
+    const val = customThresholds[id] !== undefined ? customThresholds[id] : (dev.threshold_val ?? 32);
+    if (id.includes('pump')) return { label: 'เปิดเมื่อ ความชื้นดิน (s_hmd) <', unit: '%', val, step: 1 };
+    if (id.includes('fan')) return { label: 'เปิดเมื่อ อุณหภูมิอากาศ (s_temp_s) >', unit: '°C', val, step: 0.5 };
+    if (id.includes('light')) return { label: 'เปิดเมื่อ ความเข้มแสง (l_int) <', unit: 'Lux', val, step: 1000 };
+    return { label: 'เปิดเมื่อ ค่าปุ๋ย/EC (e_water) <', unit: 'mS/cm', val, step: 0.1 };
   };
 
   return (
@@ -104,6 +125,57 @@ export const ControlsTab: React.FC<ControlsTabProps> = ({
                   {isAuto ? 'AUTO MODE' : 'MANUAL'}
                 </button>
               </div>
+
+              {/* Auto Condition Info & Editable Threshold */}
+              {(() => {
+                const meta = getAutoMeta(dev);
+                return (
+                  <div style={{
+                    fontSize: '0.76rem',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    marginBottom: '12px',
+                    background: isAuto ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                    border: `1px solid ${isAuto ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.06)'}`,
+                    color: isAuto ? '#93c5fd' : 'var(--text-muted)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                      <span>🤖 {meta.label}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <input
+                          type="number"
+                          step={meta.step}
+                          style={{
+                            width: '76px',
+                            padding: '3px 6px',
+                            fontSize: '0.78rem',
+                            borderRadius: '6px',
+                            textAlign: 'center',
+                            background: 'rgba(15, 23, 42, 0.9)',
+                            border: '1px solid rgba(96, 165, 250, 0.4)',
+                            color: '#f8fafc'
+                          }}
+                          value={meta.val}
+                          onChange={(e) => setCustomThresholds(prev => ({
+                            ...prev,
+                            [dev.device_id]: parseFloat(e.target.value) || 0
+                          }))}
+                        />
+                        <span>{meta.unit}</span>
+                        <button
+                          className="btn"
+                          style={{ padding: '3px 8px', fontSize: '0.7rem', background: 'rgba(59, 130, 246, 0.25)', color: '#60a5fa' }}
+                          onClick={() => handleSaveThreshold(dev)}
+                          disabled={isBusy}
+                          title="บันทึกค่าเกณฑ์ Auto"
+                        >
+                          <Save size={12} /> {savedMsgId === dev.device_id ? 'บันทึกแล้ว' : 'ตั้งค่า'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* State & Toggle Control */}
               <div style={{

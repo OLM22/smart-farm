@@ -117,9 +117,37 @@ function initSchema($pdo) {
         device_name TEXT,
         state TEXT DEFAULT 'OFF',
         auto_mode INTEGER DEFAULT 0,
+        threshold_val REAL DEFAULT 0,
         feedback_status TEXT DEFAULT 'IDLE',
         last_command_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );");
+
+    // เพิ่มคอลัมน์ threshold_val สำหรับตารางเดิมที่สร้างไว้แล้ว
+    try {
+        $pdo->exec("ALTER TABLE farm_device_controls ADD COLUMN threshold_val REAL DEFAULT 0");
+        $pdo->exec("UPDATE farm_device_controls SET threshold_val = 65.0 WHERE device_id = 'pump_1'");
+        $pdo->exec("UPDATE farm_device_controls SET threshold_val = 32.0 WHERE device_id = 'fan_1'");
+        $pdo->exec("UPDATE farm_device_controls SET threshold_val = 30000.0 WHERE device_id = 'light_1'");
+        $pdo->exec("UPDATE farm_device_controls SET threshold_val = 1.5 WHERE device_id = 'valve_1'");
+    } catch (Exception $e) {
+        // คอลัมน์มีอยู่แล้ว
+    }
+
+    // 5. Table for LINE Messaging API Notification Settings
+    $pdo->exec("CREATE TABLE IF NOT EXISTS farm_line_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        line_enabled INTEGER DEFAULT 1,
+        channel_token TEXT DEFAULT '',
+        target_id TEXT DEFAULT '',
+        cooldown_sec INTEGER DEFAULT 60,
+        last_sent_ts INTEGER DEFAULT 0,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );");
+
+    $lineCount = $pdo->query("SELECT COUNT(*) FROM farm_line_settings")->fetchColumn();
+    if ($lineCount == 0) {
+        $pdo->exec("INSERT INTO farm_line_settings (id, line_enabled, channel_token, target_id, cooldown_sec, last_sent_ts) VALUES (1, 1, '', '', 60, 0)");
+    }
 
     // Seed default alert thresholds if empty
     $count = $pdo->query("SELECT COUNT(*) FROM farm_alert_rules")->fetchColumn();
@@ -154,4 +182,79 @@ function initSchema($pdo) {
             $stmt->execute($d);
         }
     }
+}
+
+/**
+ * ส่งข้อความแจ้งเตือนเข้า LINE Official Account (LINE Messaging API)
+ * - หากระบุ Target ID (User ID / Group ID) จะส่งผ่าน Push API
+ * - หากเว้นว่าง Target ID จะส่งผ่าน Broadcast API ให้ทุกคนที่เป็นเพื่อนกับบอท LINE OA
+ */
+function sendLineAlertMessage($pdo, $text, $force = false) {
+    $cfg = $pdo->query("SELECT * FROM farm_line_settings WHERE id = 1")->fetch();
+    if (!$cfg) {
+        return ['sent' => false, 'reason' => 'No LINE settings found'];
+    }
+
+    if (!$force && intval($cfg['line_enabled']) !== 1) {
+        return ['sent' => false, 'reason' => 'LINE notifications disabled'];
+    }
+
+    $token = trim($cfg['channel_token'] ?? '');
+    if (empty($token)) {
+        return ['sent' => false, 'reason' => 'ยังไม่ได้ใส่ LINE Channel Access Token'];
+    }
+
+    $now = time();
+    $cooldown = intval($cfg['cooldown_sec'] ?? 60);
+    $lastSent = intval($cfg['last_sent_ts'] ?? 0);
+
+    if (!$force && $cooldown > 0 && ($now - $lastSent) < $cooldown) {
+        return ['sent' => false, 'reason' => 'อยู่ในระยะเวลา Cooldown ป้องกันสแปม'];
+    }
+
+    $targetId = trim($cfg['target_id'] ?? '');
+    if (!empty($targetId)) {
+        $url = 'https://api.line.me/v2/bot/message/push';
+        $body = [
+            'to' => $targetId,
+            'messages' => [
+                ['type' => 'text', 'text' => $text]
+            ]
+        ];
+    } else {
+        $url = 'https://api.line.me/v2/bot/message/broadcast';
+        $body = [
+            'messages' => [
+                ['type' => 'text', 'text' => $text]
+            ]
+        ];
+    }
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $token
+    ]);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_UNESCAPED_UNICODE));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr  = curl_error($ch);
+    curl_close($ch);
+
+    if ($httpCode >= 200 && $httpCode < 300) {
+        $stmt = $pdo->prepare("UPDATE farm_line_settings SET last_sent_ts = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1");
+        $stmt->execute([$now]);
+        return ['sent' => true, 'http_code' => $httpCode];
+    }
+
+    return [
+        'sent' => false,
+        'http_code' => $httpCode,
+        'reason' => $curlErr ?: $response
+    ];
 }

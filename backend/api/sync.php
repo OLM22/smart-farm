@@ -62,6 +62,7 @@ $alertStmt = $pdo->prepare("INSERT INTO farm_alert_logs (rule_key, node_id, mess
 $stmt = $pdo->prepare($sql);
 $insertedCount = 0;
 $alertTriggered = 0;
+$lineMessages = [];
 
 try {
     $pdo->beginTransaction();
@@ -74,21 +75,21 @@ try {
             ':rpi_doc_id'     => $item['rpi_doc_id'] ?? null,
             ':node_id'        => $nodeId,
             ':node_ts'        => $item['node_ts'] ?? time(),
-            ':s_temp'         => isset($data['s_temp']) ? floatval($data['s_temp']) : null,
-            ':s_hmd'          => isset($data['s_hmd']) ? floatval($data['s_hmd']) : null,
-            ':w_temp'         => isset($data['w_temp']) ? floatval($data['w_temp']) : null,
-            ':a_hmd'          => isset($data['a_hmd']) ? floatval($data['a_hmd']) : null,
-            ':p_water'        => isset($data['p_water']) ? floatval($data['p_water']) : null,
-            ':e_water'        => isset($data['e_water']) ? floatval($data['e_water']) : null,
-            ':l_int'          => isset($data['l_int']) ? floatval($data['l_int']) : null,
-            ':s_temp_s'       => isset($data['s_temp_s']) ? floatval($data['s_temp_s']) : null,
-            ':w_speed'        => isset($data['w_speed']) ? floatval($data['w_speed']) : null,
-            ':w_level'        => isset($data['w_level']) ? floatval($data['w_level']) : null,
-            ':f_rate'         => isset($data['f_rate']) ? floatval($data['f_rate']) : null,
+            ':s_temp'         => isset($data['s_temp']) ? round(floatval($data['s_temp']), 2) : null,
+            ':s_hmd'          => isset($data['s_hmd']) ? round(floatval($data['s_hmd']), 2) : null,
+            ':w_temp'         => isset($data['w_temp']) ? round(floatval($data['w_temp']), 2) : null,
+            ':a_hmd'          => isset($data['a_hmd']) ? round(floatval($data['a_hmd']), 2) : null,
+            ':p_water'        => isset($data['p_water']) ? round(floatval($data['p_water']), 2) : null,
+            ':e_water'        => isset($data['e_water']) ? round(floatval($data['e_water']), 2) : null,
+            ':l_int'          => isset($data['l_int']) ? round(floatval($data['l_int']), 1) : null,
+            ':s_temp_s'       => isset($data['s_temp_s']) ? round(floatval($data['s_temp_s']), 2) : null,
+            ':w_speed'        => isset($data['w_speed']) ? round(floatval($data['w_speed']), 2) : null,
+            ':w_level'        => isset($data['w_level']) ? round(floatval($data['w_level']), 2) : null,
+            ':f_rate'         => isset($data['f_rate']) ? round(floatval($data['f_rate']), 2) : null,
             ':c_stat'         => $data['c_stat'] ?? 'NORMAL',
             ':f_stat'         => $data['f_stat'] ?? 'IDLE',
             ':rssi'           => isset($item['rssi']) ? intval($item['rssi']) : null,
-            ':snr'            => isset($item['snr']) ? floatval($item['snr']) : null,
+            ':snr'            => isset($item['snr']) ? round(floatval($item['snr']), 2) : null,
             ':rpi_received_at'=> $item['received_at'] ?? null
         ]);
         $insertedCount++;
@@ -96,15 +97,46 @@ try {
         // Threshold evaluation
         foreach ($ruleMap as $key => $rule) {
             if (isset($data[$key])) {
-                $val = floatval($data[$key]);
+                $val = round(floatval($data[$key]), 2);
                 if ($rule['min_val'] !== null && $val < $rule['min_val']) {
                     $msg = "{$rule['label']} ต่ำกว่าเกณฑ์ ({$val} < {$rule['min_val']} {$rule['unit']})";
                     $alertStmt->execute([$key, $nodeId, $msg, $val, $rule['min_val'], 'WARNING']);
                     $alertTriggered++;
+                    $lineMessages[$key] = "⚠️ [WARNING] {$nodeId}\n• {$msg}";
                 } elseif ($rule['max_val'] !== null && $val > $rule['max_val']) {
                     $msg = "{$rule['label']} สูงกว่าเกณฑ์ ({$val} > {$rule['max_val']} {$rule['unit']})";
                     $alertStmt->execute([$key, $nodeId, $msg, $val, $rule['max_val'], 'DANGER']);
                     $alertTriggered++;
+                    $lineMessages[$key] = "🚨 [DANGER] {$nodeId}\n• {$msg}";
+                }
+            }
+        }
+
+        // Auto-Control Evaluation (เฉพาะอุปกรณ์ที่เปิดโหมด AUTO MODE = 1)
+        $autoDevices = $pdo->query("SELECT device_id, state, threshold_val FROM farm_device_controls WHERE auto_mode = 1")->fetchAll();
+        if (!empty($autoDevices)) {
+            $updateDevStmt = $pdo->prepare("UPDATE farm_device_controls SET state = ?, feedback_status = ?, last_command_at = CURRENT_TIMESTAMP WHERE device_id = ? AND state != ?");
+            foreach ($autoDevices as $dev) {
+                $devId = $dev['device_id'];
+                $newState = null;
+
+                if ($devId === 'pump_1' && isset($data['s_hmd'])) {
+                    $limit = floatval($dev['threshold_val'] ?: 65.0);
+                    $newState = (floatval($data['s_hmd']) < $limit) ? 'ON' : 'OFF';
+                } elseif ($devId === 'fan_1' && isset($data['s_temp_s'])) {
+                    $limit = floatval($dev['threshold_val'] ?: 32.0);
+                    $newState = (floatval($data['s_temp_s']) > $limit) ? 'ON' : 'OFF';
+                } elseif ($devId === 'light_1' && isset($data['l_int'])) {
+                    $limit = floatval($dev['threshold_val'] ?: 30000.0);
+                    $newState = (floatval($data['l_int']) < $limit) ? 'ON' : 'OFF';
+                } elseif ($devId === 'valve_1' && isset($data['e_water'])) {
+                    $limit = floatval($dev['threshold_val'] ?: 1.5);
+                    $newState = (floatval($data['e_water']) < $limit) ? 'ON' : 'OFF';
+                }
+
+                if ($newState !== null && $newState !== $dev['state']) {
+                    $fb = strtoupper($devId) . '_' . $newState . '_AUTO';
+                    $updateDevStmt->execute([$newState, $fb, $devId, $newState]);
                 }
             }
         }
@@ -112,11 +144,33 @@ try {
 
     $pdo->commit();
 
+    // หากมีการแจ้งเตือน ให้ส่งเข้า LINE อัตโนมัติ (มีระบบ Cooldown กันสแปม)
+    $lineResult = null;
+    if (!empty($lineMessages)) {
+        $timeStr = date('Y-m-d H:i:s');
+        $fullText = "🌱 แจ้งเตือนระบบ CRU Smart Farm\n"
+                  . "━━━━━━━━━━━━━━\n"
+                  . implode("\n", array_values($lineMessages)) . "\n"
+                  . "━━━━━━━━━━━━━━\n"
+                  . "🕒 เวลา: {$timeStr}\n"
+                  . "📊 แดชบอร์ด: http://olmy.duckdns.org:5173";
+        $lineResult = sendLineAlertMessage($pdo, $fullText, false);
+    }
+
+    // ดึงสถานะคำสั่งควบคุมอุปกรณ์ทั้ง 4 ช่องส่งกลับไปพร้อม sync response
+    $ctrlStmt = $pdo->query("SELECT device_id, command_state, auto_mode FROM farm_device_controls");
+    $controlsMap = [];
+    foreach ($ctrlStmt->fetchAll() as $cRow) {
+        $controlsMap[$cRow['device_id']] = $cRow['command_state'];
+    }
+
     echo json_encode([
         'status' => 'success',
         'message' => "Successfully synced {$insertedCount} records.",
         'synced_count' => $insertedCount,
-        'alerts_triggered' => $alertTriggered
+        'alerts_triggered' => $alertTriggered,
+        'line_notification' => $lineResult,
+        'controls' => $controlsMap
     ]);
 
 } catch (Exception $e) {

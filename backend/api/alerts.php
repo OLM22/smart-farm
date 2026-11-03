@@ -60,6 +60,59 @@ try {
 
         echo json_encode(['status' => 'success', 'message' => 'Alert(s) marked as read']);
 
+    } elseif ($type === 'line_settings') {
+        $cfg = $pdo->query("SELECT * FROM farm_line_settings WHERE id = 1")->fetch();
+        echo json_encode([
+            'status' => 'success',
+            'settings' => [
+                'line_enabled'  => intval($cfg['line_enabled'] ?? 1),
+                'channel_token' => $cfg['channel_token'] ?? '',
+                'target_id'     => $cfg['target_id'] ?? '',
+                'cooldown_sec'  => intval($cfg['cooldown_sec'] ?? 60),
+                'last_sent_ts'  => intval($cfg['last_sent_ts'] ?? 0)
+            ]
+        ]);
+
+    } elseif ($type === 'save_line_settings') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $stmt = $pdo->prepare("UPDATE farm_line_settings SET line_enabled = :enabled, channel_token = :token, target_id = :target, cooldown_sec = :cooldown, updated_at = CURRENT_TIMESTAMP WHERE id = 1");
+        $stmt->execute([
+            ':enabled'  => isset($data['line_enabled']) ? intval($data['line_enabled']) : 1,
+            ':token'    => trim($data['channel_token'] ?? ''),
+            ':target'   => trim($data['target_id'] ?? ''),
+            ':cooldown' => isset($data['cooldown_sec']) ? intval($data['cooldown_sec']) : 60
+        ]);
+
+        echo json_encode(['status' => 'success', 'message' => 'บันทึกการตั้งค่าแจ้งเตือน LINE เรียบร้อยแล้ว']);
+
+    } elseif ($type === 'test_line') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        // หากส่ง token มาพร้อมปุ่มทดสอบ ให้บันทึกก่อนทดสอบทันที
+        if (isset($data['channel_token'])) {
+            $stmt = $pdo->prepare("UPDATE farm_line_settings SET line_enabled = :enabled, channel_token = :token, target_id = :target, cooldown_sec = :cooldown, updated_at = CURRENT_TIMESTAMP WHERE id = 1");
+            $stmt->execute([
+                ':enabled'  => isset($data['line_enabled']) ? intval($data['line_enabled']) : 1,
+                ':token'    => trim($data['channel_token'] ?? ''),
+                ':target'   => trim($data['target_id'] ?? ''),
+                ':cooldown' => isset($data['cooldown_sec']) ? intval($data['cooldown_sec']) : 60
+            ]);
+        }
+
+        $timeStr = date('Y-m-d H:i:s');
+        $testMsg = "🌱 [ทดสอบการแจ้งเตือน CRU Smart Farm]\n"
+                 . "━━━━━━━━━━━━━━\n"
+                 . "✅ ระบบแจ้งเตือน LINE Messaging API เชื่อมต่อสำเร็จ!\n"
+                 . "📡 โหนด: ESP32_NODE_01 (LoRa 433MHz)\n"
+                 . "🕒 เวลา: {$timeStr}\n"
+                 . "🌐 แดชบอร์ด: http://olmy.duckdns.org:5173";
+
+        $res = sendLineAlertMessage($pdo, $testMsg, true);
+        if ($res['sent']) {
+            echo json_encode(['status' => 'success', 'message' => 'ส่งข้อความทดสอบเข้า LINE สำเร็จแล้ว! กรุณาเช็กในแอป LINE ของคุณ']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'ส่งไม่สำเร็จ: ' . ($res['reason'] ?? 'Unknown error')]);
+        }
+
     } else {
         http_response_code(400);
         echo json_encode(['status' => 'error', 'message' => 'Invalid action']);

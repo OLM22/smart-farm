@@ -7,14 +7,19 @@ interface ZonesTabProps {
 }
 
 export const ZonesTab: React.FC<ZonesTabProps> = ({ latest }) => {
+  const baseMoisture = Number(latest?.s_hmd ?? 68.5);
+  const baseSoilTemp = Number(latest?.s_temp ?? 27.8);
+  const baseWaterTemp = Number(latest?.w_temp ?? 25.4);
+  const baseLight = Number(latest?.l_int ?? 38000);
+
   const zones = [
     {
       id: 'ZONE-01',
       name: 'Zone 1: แปลงเพาะกล้าและระบบพ่นหมอก (Nursery & Fogging)',
-      soilMoisture: latest?.s_hmd ?? 68.5,
-      soilTemp: latest?.s_temp ?? 27.8,
-      waterTemp: latest?.w_temp ?? 25.4,
-      light: latest?.l_int ?? 38000,
+      soilMoisture: baseMoisture,
+      soilTemp: baseSoilTemp,
+      waterTemp: baseWaterTemp,
+      light: baseLight,
       actuators: [
         { name: 'สเปรย์หมอก (Zone Fogger)', state: 'ACTIVE' },
         { name: 'วาล์วน้ำโซน 1 (Zone Valve 1)', state: 'OPEN' }
@@ -23,10 +28,10 @@ export const ZonesTab: React.FC<ZonesTabProps> = ({ latest }) => {
     {
       id: 'ZONE-02',
       name: 'Zone 2: แปลงปลูกพืชหลักและระบบน้ำหยด (Main Growth Bed)',
-      soilMoisture: ((latest?.s_hmd ?? 65) - 3.2),
-      soilTemp: ((latest?.s_temp ?? 28) + 0.8),
-      waterTemp: latest?.w_temp ?? 26.0,
-      light: ((latest?.l_int ?? 42000) + 3000),
+      soilMoisture: baseMoisture - 3.2,
+      soilTemp: baseSoilTemp + 0.8,
+      waterTemp: baseWaterTemp + 0.6,
+      light: baseLight + 3000,
       actuators: [
         { name: 'ปั๊มน้ำหลัก (Main Pump)', state: 'ACTIVE' },
         { name: 'พัดลมระบาย (Exhaust Fan)', state: 'STANDBY' }
@@ -35,10 +40,10 @@ export const ZonesTab: React.FC<ZonesTabProps> = ({ latest }) => {
     {
       id: 'ZONE-03',
       name: 'Zone 3: แปลงทดลองพืชพิเศษและหลอดสังเคราะห์แสง (Research Lab)',
-      soilMoisture: ((latest?.s_hmd ?? 62) + 2.1),
-      soilTemp: ((latest?.s_temp ?? 27) - 0.5),
-      waterTemp: latest?.w_temp ?? 25.8,
-      light: ((latest?.l_int ?? 45000) - 2000),
+      soilMoisture: baseMoisture + 2.1,
+      soilTemp: baseSoilTemp - 0.5,
+      waterTemp: baseWaterTemp + 0.4,
+      light: baseLight - 2000,
       actuators: [
         { name: 'ไฟสังเคราะห์แสง (Growth Light)', state: 'ACTIVE' },
         { name: 'วาล์วสารอาหาร (Nutrient Valve)', state: 'STANDBY' }

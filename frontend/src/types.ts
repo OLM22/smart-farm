@@ -82,6 +82,7 @@ export interface DeviceControl {
   device_name: string;
   state: 'ON' | 'OFF';
   auto_mode: number;
+  threshold_val?: number;
   feedback_status: string;
   last_command_at: string;
 }

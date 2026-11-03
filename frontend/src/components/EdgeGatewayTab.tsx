@@ -61,8 +61,8 @@ export const EdgeGatewayTab: React.FC<EdgeGatewayTabProps> = ({ latest, totalLog
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.82rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
-              <span style={{ color: '#94a3b8' }}>IP Address (LAN):</span>
-              <strong style={{ color: '#f8fafc' }}>192.168.1.100</strong>
+              <span style={{ color: '#94a3b8' }}>Hostname (mDNS):</span>
+              <strong style={{ color: '#f8fafc' }}>raspberrypi.local</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
               <span style={{ color: '#94a3b8' }}>USB Serial Port:</span>
@@ -147,7 +147,7 @@ export const EdgeGatewayTab: React.FC<EdgeGatewayTabProps> = ({ latest, totalLog
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
               <span style={{ color: '#94a3b8' }}>Target Server URL:</span>
-              <strong style={{ color: '#60a5fa' }}>http://localhost:8000/api/sync.php</strong>
+              <strong style={{ color: '#60a5fa' }}>http://DESKTOP-P4UNEON.local:8000/api/sync.php</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#94a3b8' }}>Total Record Buffer:</span>

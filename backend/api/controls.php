@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $deviceId = $data['device_id'] ?? null;
     $state = $data['state'] ?? null;
     $autoMode = isset($data['auto_mode']) ? intval($data['auto_mode']) : null;
+    $thresholdVal = isset($data['threshold_val']) ? floatval($data['threshold_val']) : null;
 
     if (!$deviceId) {
         http_response_code(400);
@@ -43,6 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($autoMode !== null) {
         $updates[] = "auto_mode = :auto_mode";
         $params[':auto_mode'] = $autoMode;
+    }
+
+    if ($thresholdVal !== null) {
+        $updates[] = "threshold_val = :threshold_val";
+        $params[':threshold_val'] = $thresholdVal;
     }
 
     $updates[] = "last_command_at = CURRENT_TIMESTAMP";

@@ -10,7 +10,10 @@ import {
   ShieldCheck, 
   Compass, 
   CheckCircle2, 
-  ExternalLink 
+  ExternalLink,
+  Plus,
+  Trash2,
+  X
 } from 'lucide-react';
 import type { FarmLocation } from '../types';
 
@@ -18,54 +21,80 @@ interface GisMapTabProps {
   onSelectFarmForDashboard?: (farmId: string) => void;
 }
 
+const DEFAULT_FARMS: FarmLocation[] = [
+  {
+    id: 'farm-001',
+    name: 'CRU Demo Center (กรุงเทพฯ)',
+    lat: 13.8055,
+    lng: 100.5744,
+    status: 'ACTIVE',
+    zonesCount: 3,
+    description: 'ศูนย์สาธิตระบบสมาร์ทฟาร์มและแปลงเพาะเลี้ยงตัวอย่าง'
+  },
+  {
+    id: 'farm-002',
+    name: 'CRU Algae Greenhouse (กรุงเทพฯ)',
+    lat: 13.8062,
+    lng: 100.5750,
+    status: 'ACTIVE',
+    zonesCount: 3,
+    description: 'โรงเรือนเพาะเลี้ยงสาหร่ายเซลล์เดียวและไมโครอัลจี'
+  },
+  {
+    id: 'farm-003',
+    name: 'CRU Organic Farm (ชลบุรี)',
+    lat: 13.3611,
+    lng: 100.9847,
+    status: 'ACTIVE',
+    zonesCount: 4,
+    description: 'แปลงเกษตรอินทรีย์พืชผักสลัดและระบบน้ำอัตโนมัติ'
+  },
+  {
+    id: 'farm-004',
+    name: 'CRU Smart Highlands (เชียงใหม่)',
+    lat: 18.7883,
+    lng: 98.9853,
+    status: 'ACTIVE',
+    zonesCount: 2,
+    description: 'แปลงวิจัยพืชเมืองหนาวและสถานีตรวจวัดสภาพอากาศ'
+  }
+];
+
 export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }) => {
   const [mapLayer, setMapLayer] = useState<'satellite' | 'street' | 'terrain'>('satellite');
   const [selectedFarm, setSelectedFarm] = useState<string>('farm-001');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Load saved farms from localStorage or fallback to DEFAULT_FARMS
+  const [farms, setFarms] = useState<FarmLocation[]>(() => {
+    try {
+      const saved = localStorage.getItem('cru_farm_locations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_FARMS;
+  });
+
+  // Pin-Drop & Add Farm Form State
+  const [pinMode, setPinMode] = useState(false);
+  const [pickedCoord, setPickedCoord] = useState<{ lat: number; lng: number } | null>(null);
+  const [newName, setNewName] = useState('');
+  const [newDesc, setNewDesc] = useState('');
   
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<Record<string, L.Marker>>({});
+  const previewMarkerRef = useRef<L.Marker | null>(null);
 
-  const farms: FarmLocation[] = [
-    {
-      id: 'farm-001',
-      name: 'CRU Demo Center (กรุงเทพฯ)',
-      lat: 13.8055,
-      lng: 100.5744,
-      status: 'ACTIVE',
-      zonesCount: 3,
-      description: 'ศูนย์สาธิตระบบสมาร์ทฟาร์มและแปลงเพาะเลี้ยงตัวอย่าง'
-    },
-    {
-      id: 'farm-002',
-      name: 'CRU Algae Greenhouse (กรุงเทพฯ)',
-      lat: 13.8062,
-      lng: 100.5750,
-      status: 'ACTIVE',
-      zonesCount: 3,
-      description: 'โรงเรือนเพาะเลี้ยงสาหร่ายเซลล์เดียวและไมโครอัลจี'
-    },
-    {
-      id: 'farm-003',
-      name: 'CRU Organic Farm (ชลบุรี)',
-      lat: 13.3611,
-      lng: 100.9847,
-      status: 'ACTIVE',
-      zonesCount: 4,
-      description: 'แปลงเกษตรอินทรีย์พืชผักสลัดและระบบน้ำอัตโนมัติ'
-    },
-    {
-      id: 'farm-004',
-      name: 'CRU Smart Highlands (เชียงใหม่)',
-      lat: 18.7883,
-      lng: 98.9853,
-      status: 'ACTIVE',
-      zonesCount: 2,
-      description: 'แปลงวิจัยพืชเมืองหนาวและสถานีตรวจวัดสภาพอากาศ'
-    }
-  ];
+  // Save to localStorage whenever farms change
+  useEffect(() => {
+    try {
+      localStorage.setItem('cru_farm_locations', JSON.stringify(farms));
+    } catch { /* ignore */ }
+  }, [farms]);
 
   // Tile URL providers
   const getTileUrl = (layer: 'satellite' | 'street' | 'terrain') => {
@@ -92,12 +121,77 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
     }
   };
 
+  // Place or move the temporary Red Preview Pin when user clicks map
+  const placePreviewPin = (lat: number, lng: number) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    setPickedCoord({ lat, lng });
+    setPinMode(true);
+
+    if (previewMarkerRef.current) {
+      previewMarkerRef.current.setLatLng([lat, lng]);
+      previewMarkerRef.current.openPopup();
+      return;
+    }
+
+    const previewIcon = L.divIcon({
+      className: 'preview-farm-pin',
+      html: `
+        <div style="
+          width: 42px;
+          height: 42px;
+          border-radius: 50% 50% 50% 0;
+          background: #f43f5e;
+          transform: rotate(-45deg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 0 22px rgba(244, 63, 94, 0.9);
+          border: 3px solid #ffffff;
+          cursor: grab;
+        ">
+          <span style="transform: rotate(45deg); color: #fff; font-size: 18px; font-weight: bold;">
+            📍
+          </span>
+        </div>
+      `,
+      iconSize: [42, 42],
+      iconAnchor: [21, 42],
+      popupAnchor: [0, -42]
+    });
+
+    const pMarker = L.marker([lat, lng], { icon: previewIcon, draggable: true }).addTo(map);
+    pMarker.bindPopup(`
+      <div style="font-family: sans-serif; color: #0f172a; text-align: center; min-width: 160px;">
+        <div style="font-weight: 800; color: #e11d48; font-size: 13px;">📍 จุดปักหมุดใหม่ (ลากเลื่อนได้)</div>
+        <div style="font-size: 11px; color: #475569; margin-top: 4px;">ตั้งชื่อฟาร์มด้านขวาแล้วกดบันทึกได้เลย</div>
+      </div>
+    `).openPopup();
+
+    pMarker.on('dragend', () => {
+      const pos = pMarker.getLatLng();
+      setPickedCoord({ lat: pos.lat, lng: pos.lng });
+    });
+
+    previewMarkerRef.current = pMarker;
+  };
+
+  // Remove temporary preview pin
+  const clearPreviewPin = () => {
+    if (previewMarkerRef.current) {
+      previewMarkerRef.current.remove();
+      previewMarkerRef.current = null;
+    }
+    setPickedCoord(null);
+    setPinMode(false);
+  };
+
   // Initialize Leaflet map
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    // Center on Thailand
     const map = L.map(mapContainerRef.current, {
       center: [14.5, 100.8],
       zoom: 6,
@@ -113,13 +207,30 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
     tileLayerRef.current = tileLayer;
     mapInstanceRef.current = map;
 
-    // Add zoom control at bottom right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Create markers for each farm with custom CSS pins
+    // Clicking anywhere on the map drops the red pin immediately!
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      placePreviewPin(e.latlng.lat, e.latlng.lng);
+    });
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  // Sync saved farm markers whenever `farms` array changes
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    Object.values(markersRef.current).forEach((m) => m.remove());
+    markersRef.current = {};
+
     farms.forEach((farm) => {
       const isDemo = farm.id === 'farm-001';
-      const isHighland = farm.id === 'farm-004';
+      const isHighland = farm.id === 'farm-004' || farm.lat > 16;
       const bgColor = isHighland ? '#f59e0b' : '#10b981';
       const iconEmoji = isHighland ? '📍' : isDemo ? '🌾' : '🌱';
 
@@ -152,7 +263,6 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
 
       const marker = L.marker([farm.lat, farm.lng], { icon: customIcon }).addTo(map);
 
-      // Popup
       const popupHtml = `
         <div style="font-family: sans-serif; color: #0f172a; min-width: 180px;">
           <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px;">${farm.name}</div>
@@ -169,12 +279,7 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
 
       markersRef.current[farm.id] = marker;
     });
-
-    return () => {
-      map.remove();
-      mapInstanceRef.current = null;
-    };
-  }, []);
+  }, [farms]);
 
   // Update tile layer when layer state changes
   useEffect(() => {
@@ -209,9 +314,50 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
 
   // Handle Fit All
   const handleFitAll = () => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || farms.length === 0) return;
     const bounds = L.latLngBounds(farms.map(f => [f.lat, f.lng]));
     mapInstanceRef.current.fitBounds(bounds, { padding: [60, 60] });
+  };
+
+  // Start Pin Mode at current map center if user clicks button first
+  const handleTogglePinMode = () => {
+    if (pinMode) {
+      clearPreviewPin();
+    } else {
+      const center = mapInstanceRef.current?.getCenter() || { lat: 13.8058, lng: 100.5748 };
+      placePreviewPin(center.lat, center.lng);
+    }
+  };
+
+  // Save New Farm Location from dropped pin
+  const handleAddFarm = (e: React.FormEvent) => {
+    e.preventDefault();
+    const coord = pickedCoord || { lat: 13.8058, lng: 100.5748 };
+    const finalName = newName.trim() || `CRU Smart Plot #${farms.length + 1}`;
+
+    const newFarm: FarmLocation = {
+      id: `farm-${Date.now().toString().slice(-4)}`,
+      name: finalName,
+      lat: coord.lat,
+      lng: coord.lng,
+      status: 'ACTIVE',
+      zonesCount: 3,
+      description: newDesc.trim() || 'แปลงเพาะปลูกภายใต้ระบบ CRU Smart Farm AIoT'
+    };
+
+    const updated = [...farms, newFarm];
+    setFarms(updated);
+    setNewName('');
+    setNewDesc('');
+    clearPreviewPin();
+    setTimeout(() => handleFlyTo(newFarm), 150);
+  };
+
+  // Handle Delete Farm
+  const handleDeleteFarm = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (farms.length <= 1) return;
+    setFarms(farms.filter(f => f.id !== id));
   };
 
   const filteredFarms = farms.filter(f => 
@@ -245,14 +391,28 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
             </h2>
           </div>
           <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-            สำรวจตำแหน่ง Farm แบบ Interactive, ตรวจสถานะพื้นที่ และนำทางไปยัง Dashboard ได้จากศูนย์ควบคุมเดียว โดยแสดงเฉพาะข้อมูลตามสิทธิ์ของผู้ใช้
+            💡 จิ้มคลิกจุดไหนก็ได้บนแผนที่เพื่อปักหมุดฟาร์มใหม่ทันที (หรือลากหมุดสีแดงเพื่อเลื่อนตำแหน่งได้ตามต้องการ)
           </p>
         </div>
 
-        <button className="btn" style={{ background: 'rgba(255, 255, 255, 0.08)' }} onClick={handleFitAll}>
-          <RefreshCw size={15} />
-          Refresh GIS Data
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            className="btn"
+            style={{
+              background: pinMode ? 'rgba(244, 63, 94, 0.25)' : 'rgba(16, 185, 129, 0.2)',
+              border: `1px solid ${pinMode ? '#f43f5e' : '#10b981'}`,
+              color: pinMode ? '#fda4af' : '#34d399',
+              fontWeight: 700
+            }}
+            onClick={handleTogglePinMode}
+          >
+            {pinMode ? <><X size={15} /> ยกเลิกการปักหมุด</> : <><MapPin size={15} /> จิ้มปักหมุดฟาร์มใหม่</>}
+          </button>
+          <button className="btn" style={{ background: 'rgba(255, 255, 255, 0.08)' }} onClick={handleFitAll}>
+            <RefreshCw size={15} />
+            Fit All ({farms.length})
+          </button>
+        </div>
       </div>
 
       {/* 4 Stat Metric Cards */}
@@ -266,15 +426,15 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#10b981', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
             <MapPin size={14} /> Mapped Farms
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>4</div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>จาก 4 Farm ทั้งหมด</div>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{farms.length}</div>
+          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>จาก {farms.length} Farm ทั้งหมด</div>
         </div>
 
         <div className="glass-panel" style={{ padding: '16px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#34d399', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
             <CheckCircle2 size={14} /> Active Sites
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>3</div>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{farms.length}</div>
           <div style={{ fontSize: '0.75rem', color: '#64748b' }}>พร้อมใช้งานบนแผนที่</div>
         </div>
 
@@ -288,10 +448,10 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
 
         <div className="glass-panel" style={{ padding: '16px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#fbbf24', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
-            <Crosshair size={14} /> Missing GPS
+            <Crosshair size={14} /> โหมดปักหมุด
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>0</div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ไม่ต้องเติมพิกัดเพื่อแสดงหมุด</div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399', marginTop: '6px' }}>คลิกบนแผนที่ได้ทันที</div>
+          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>ไม่ต้องพิมพ์ตัวเลขพิกัดเอง</div>
         </div>
       </div>
 
@@ -309,7 +469,7 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
           borderRadius: '20px',
           overflow: 'hidden',
           background: '#09101c',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+          border: pinMode ? '2px solid #f43f5e' : '1px solid rgba(255, 255, 255, 0.1)'
         }}>
           {/* Map Mount Point */}
           <div 
@@ -323,7 +483,8 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
               left: 0,
               right: 0,
               bottom: 0,
-              zIndex: 1
+              zIndex: 1,
+              cursor: 'crosshair'
             }} 
           />
 
@@ -458,7 +619,7 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
             pointerEvents: 'none'
           }}>
             <div className="badge" style={{ background: 'rgba(10, 15, 26, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#34d399' }}>
-              <span className="pulse-dot" /> แผนที่ดาวเทียมความละเอียดสูง (Live GIS)
+              <span className="pulse-dot" /> คลิกจุดใดก็ได้บนแผนที่เพื่อปักหมุดใหม่ทันที
             </div>
             <div className="badge" style={{ background: 'rgba(10, 15, 26, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#94a3b8' }}>
               GIS Layer: {mapLayer.toUpperCase()}
@@ -484,15 +645,73 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
               </span>
             </div>
 
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '4px' }}>
-              Farm Locations
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '16px' }}>
-              เลือก Farm เพื่อ Fly-To และตรวจข้อมูลตำแหน่ง
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>
+                Farm Locations
+              </h3>
+              <button
+                className="btn"
+                style={{ padding: '4px 10px', fontSize: '0.75rem', background: pinMode ? 'rgba(244,63,94,0.2)' : 'rgba(16,185,129,0.2)', color: pinMode ? '#fb7185' : '#34d399' }}
+                onClick={handleTogglePinMode}
+              >
+                {pinMode ? <><X size={13} /> ยกเลิก</> : <><Plus size={13} /> ปักหมุดเพิ่ม</>}
+              </button>
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '14px' }}>
+              👆 <b>จิ้มคลิกจุดบนแผนที่ได้เลย</b> หมุดสีแดงจะเด้งขึ้นมาโดยไม่ต้องพิมพ์เลขพิกัด
             </p>
 
+            {/* Pin-Drop Save Box (Appears automatically when user clicks on map!) */}
+            {pinMode && pickedCoord && (
+              <form
+                onSubmit={handleAddFarm}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.92)',
+                  border: '2px solid #f43f5e',
+                  borderRadius: '14px',
+                  padding: '14px',
+                  marginBottom: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  boxShadow: '0 8px 24px rgba(244, 63, 94, 0.2)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fda4af' }}>
+                    📍 เลือกจุดปักหมุดแล้ว (ลากเลื่อนหมุดสีแดงได้)
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'monospace' }}>
+                    {pickedCoord.lat.toFixed(4)}, {pickedCoord.lng.toFixed(4)}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="ตั้งชื่อฟาร์ม (หรือกดบันทึกเลยก็ได้)"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  autoFocus
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem' }}
+                />
+                <input
+                  type="text"
+                  placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '0.82rem' }}
+                />
+                <button
+                  type="submit"
+                  className="btn"
+                  style={{ background: '#10b981', color: '#052e16', fontWeight: 800, justifyContent: 'center', padding: '10px', fontSize: '0.88rem' }}
+                >
+                  ✅ ยืนยันปักหมุดฟาร์มจุดนี้
+                </button>
+              </form>
+            )}
+
             {/* Search Input */}
-            <div style={{ position: 'relative', marginBottom: '16px' }}>
+            <div style={{ position: 'relative', marginBottom: '12px' }}>
               <Search size={16} color="#64748b" style={{ position: 'absolute', left: '12px', top: '12px' }} />
               <input
                 type="text"
@@ -509,13 +728,13 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
               />
             </div>
 
-            <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{filteredFarms.length} จาก 4 จุดพิกัด</span>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+              <span>{filteredFarms.length} จาก {farms.length} จุดพิกัด</span>
               <span style={{ fontStyle: 'italic' }}>Click to Fly-To</span>
             </div>
 
             {/* Farm Cards List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '440px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '420px', overflowY: 'auto' }}>
               {filteredFarms.map((farm) => {
                 const isSelected = selectedFarm === farm.id;
                 return (
@@ -557,16 +776,28 @@ export const GisMapTab: React.FC<GisMapTabProps> = ({ onSelectFarmForDashboard }
                         &bull; Focus on map
                       </span>
 
-                      <button
-                        className="btn"
-                        style={{ padding: '3px 8px', fontSize: '0.72rem' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onSelectFarmForDashboard) onSelectFarmForDashboard(farm.id);
-                        }}
-                      >
-                        <ExternalLink size={12} /> Dashboard
-                      </button>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {farms.length > 1 && (
+                          <button
+                            className="btn"
+                            title="ลบพิกัดนี้"
+                            style={{ padding: '3px 7px', fontSize: '0.72rem', background: 'rgba(244,63,94,0.15)', color: '#fb7185' }}
+                            onClick={(e) => handleDeleteFarm(farm.id, e)}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                        <button
+                          className="btn"
+                          style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onSelectFarmForDashboard) onSelectFarmForDashboard(farm.id);
+                          }}
+                        >
+                          <ExternalLink size={12} /> Dashboard
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
